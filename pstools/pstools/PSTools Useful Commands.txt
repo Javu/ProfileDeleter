@@ -1,0 +1,6 @@
+psinfo.exe \\<hostname> -s
+
+Gives a list of programs on the remote computer.
+
+See here for more psinfo commands:
+https://technet.microsoft.com/en-us/sysinternals/psinfo.aspx
