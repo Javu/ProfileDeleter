@@ -716,7 +716,7 @@ public class ProfileDeleter
                 String folder = folders.get(i).name;
                 LogMessage("Checking editable state of folder " + folder, LOG_TYPE.INFO, true);
                 try {
-                    RenameDirectory(users_directory, folder, folder);
+                    RenameDirectory("C:\\users\\", folder, folder);
                 } catch(CannotEditException e) {
                     String message = "Uneditable. User may be logged in or PC may need to be restarted";
                     LogMessage(message, LOG_TYPE.WARNING, true);
@@ -805,7 +805,7 @@ public class ProfileDeleter
     public void RenameDirectory(String directory, String folder, String folder_renamed) throws IOException, CannotEditException {
         try{
             LogMessage("Attempting to rename folder " + directory + folder + " to " + folder_renamed , LOG_TYPE.INFO, true);
-            String command = "REN \"" + directory + folder + "\" \"" + folder_renamed + "\" && echo editable|| echo uneditable";
+            String command = ".\\pstools\\psexec \\\\" + computer + " cmd /c REN \"" + directory + folder + "\" \"" + folder_renamed + "\" && echo editable|| echo uneditable";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);	
             Process cmd_process = builder.start();
