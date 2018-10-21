@@ -28,6 +28,7 @@ public class ProfileDeleter
     private boolean state_check;
     private boolean reg_check;
     private boolean sid_guid_check_complete;
+    public BufferedReader console_in;
 
     public enum LOG_TYPE {
         INFO(0),
@@ -51,7 +52,6 @@ public class ProfileDeleter
         String error = "";
         String option = "";
         String blank_option = "";
-        BufferedReader console_in = new BufferedReader(new InputStreamReader(System.in));
         int menu = 1;
         while(run) {
             try {
@@ -119,7 +119,7 @@ public class ProfileDeleter
 
                 error = "";
 
-                option = console_in.readLine();
+                option = deleter.console_in.readLine();
 
                 if(menu == 1) {
                     if(option.compareTo("1") == 0) {
@@ -252,6 +252,7 @@ public class ProfileDeleter
         state_check = true;
         reg_check = true;
         sid_guid_check_complete = false;
+        console_in = new BufferedReader(new InputStreamReader(System.in));
     }
 
     public void SetComputer(String computer) {
@@ -438,7 +439,31 @@ public class ProfileDeleter
                     run = false;
                 } catch(IOException | CannotEditException e) {
                     if(count > 29) {
-                        throw e;
+                        LogMessage("Back up of registry key has failed too many times. You may not have permission to backup the registry, you may not have permissions to create folders and files in \\\\" + computer + "\\C$\\temp, or the drive may not have a couple of MB free to create the registry backups needed. Check permissions or delete some files from the remote PC. Awaiting prompt from user", LOG_TYPE.WARNING, true);
+                        System.out.println("Failed to backup registry file \"HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\ProfileList\". You may not have permission to backup the registry, you may not have permissions to create folders and files in \\\\" + computer + "\\C$\\temp, or the drive may not have a couple of MB free to create the registry backups needed.");
+                        System.out.println("1. Retry (it is recommended you manually delete a few MB of files before retrying)");
+                        System.out.println("2. Delete all files in \\\\" + computer + "\\C$\\temp except BGInfo.bmp and retry");
+                        System.out.println("3. Stop running registry backup");
+                        System.out.println("Please enter an option (1-3):");
+                        String option = console_in.readLine();
+                        if(option.compareTo("1") == 0) {
+                            LogMessage("User has selected to retry registry backup", LOG_TYPE.INFO, true);
+                            count = 0;
+                        } else if(option.compareTo("2") == 0) {
+                            LogMessage("User has selected to delete all files in \\\\" + computer + "\\C$\\temp except BGInfo.bmp and retry", LOG_TYPE.INFO, true);
+                            count = 0;
+                            List<String> exclude_files = new ArrayList<String>();
+                            exclude_files.add("BGInfo.bmp");
+                            exclude_files.add("bginfo.bmp");
+                            List<String> files_to_delete = GetFileList("\\\\" + computer + "\\C$\\temp");
+                            DeleteFilesInDirectory("\\\\" + computer + "\\C$\\temp", files_to_delete, exclude_files);
+                        } else if(option.compareTo("3") == 0) {
+                            LogMessage("User has selected to stop running registry backup", LOG_TYPE.INFO, true);
+                            throw e;
+                        } else {
+                            System.out.println("Invalid option");
+                            System.out.println("");
+                        }
                     } else {
                         LogMessage("Attempt " + Integer.toString(count+1) + " at backing up registry key failed", LOG_TYPE.WARNING, true);
                         count++;
@@ -453,7 +478,31 @@ public class ProfileDeleter
                     run = false;
                 } catch(IOException | CannotEditException e) {
                     if(count > 29) {
-                        throw e;
+                        LogMessage("Back up of registry key has failed too many times. You may not have permission to backup the registry, you may not have permissions to create folders and files in \\\\" + computer + "\\C$\\temp, or the drive may not have a couple of MB free to create the registry backups needed. Check permissions or delete some files from the remote PC. Awaiting prompt from user", LOG_TYPE.WARNING, true);
+                        System.out.println("Failed to backup registry file \"HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\ProfileGuid\". You may not have permission to backup the registry, you may not have permissions to create folders and files in \\\\" + computer + "\\C$\\temp, or the drive may not have a couple of MB free to create the registry backups needed.");
+                        System.out.println("1. Retry (it is recommended you manually delete a few MB of files before retrying)");
+                        System.out.println("2. Delete all files in \\\\" + computer + "\\C$\\temp except BGInfo.bmp and retry");
+                        System.out.println("3. Stop running registry backup");
+                        System.out.println("Please enter an option (1-3):");
+                        String option = console_in.readLine();
+                        if(option.compareTo("1") == 0) {
+                            LogMessage("User has selected to retry registry backup", LOG_TYPE.INFO, true);
+                            count = 0;
+                        } else if(option.compareTo("2") == 0) {
+                            LogMessage("User has selected to delete all files in \\\\" + computer + "\\C$\\temp except BGInfo.bmp and retry", LOG_TYPE.INFO, true);
+                            count = 0;
+                            List<String> exclude_files = new ArrayList<String>();
+                            exclude_files.add("BGInfo.bmp");
+                            exclude_files.add("bginfo.bmp");
+                            List<String> files_to_delete = GetFileList("\\\\" + computer + "\\C$\\temp");
+                            DeleteFilesInDirectory("\\\\" + computer + "\\C$\\temp", files_to_delete, exclude_files);
+                        } else if(option.compareTo("3") == 0) {
+                            LogMessage("User has selected to stop running registry backup", LOG_TYPE.INFO, true);
+                            throw e;
+                        } else {
+                            System.out.println("Invalid option");
+                            System.out.println("");
+                        }
                     } else {
                         LogMessage("Attempt " + Integer.toString(count+1) + " at backing up registry key failed", LOG_TYPE.WARNING, true);
                         count++;
@@ -662,46 +711,12 @@ public class ProfileDeleter
 
     public void CheckState() throws IOException {
         LogMessage("Checking editable state of directory list", LOG_TYPE.INFO, true);
-        String suffix = GenerateDateString();
         if(folders.size() > 0 && users_directory.compareTo("") != 0) {
             for(int i=0;i<folders.size();i++) {
                 String folder = folders.get(i).name;
-                String renamed_folder = folder + suffix;
                 LogMessage("Checking editable state of folder " + folder, LOG_TYPE.INFO, true);
                 try {
-                    RenameDirectory(users_directory, folder, renamed_folder);
-                    LogMessage("Renaming folder " + renamed_folder + " back to " + folder, LOG_TYPE.INFO, true);
-                    try {
-                        RenameDirectory(users_directory, renamed_folder, folder);
-                        folders.get(i).state = "OK";
-                        LogMessage("State check successful. Folder is editable", LOG_TYPE.INFO, true);
-                    } catch(CannotEditException | IOException e) {
-                        LogMessage("Failed to rename folder " + renamed_folder + " back to " + folder + ". Will try again", LOG_TYPE.WARNING, true);
-                        boolean try_again = true;
-                        boolean success = false;
-                        int count = 0;
-                        while(try_again) {
-                            LogMessage("Attempt " + Integer.toString(count+1) + " at renaming folder " + renamed_folder + " back to " + folder, LOG_TYPE.WARNING, true);
-                            try {
-                                RenameDirectory(users_directory, renamed_folder, folder);
-                                try_again = false;
-                                success = true;
-                                LogMessage("Attempt " + Integer.toString(count+1) + " was successful. Folder " + folder + ". Editable state set to OK", LOG_TYPE.INFO, true);
-                            } catch (CannotEditException | IOException e2) {
-                                LogMessage("Attempt " + Integer.toString(count+1) + " failed", LOG_TYPE.WARNING, true);
-                                count++;
-                                if(count > 19 && success == false) {
-                                   try_again = false;
-                                }
-                            }
-                        }
-                        if(success) {
-                            folders.get(i).state = "OK";
-                        } else {
-                            LogMessage("All attempts to rename folder " + renamed_folder + " back to " + folder + " have failed. Editable state set accordingly", LOG_TYPE.ERROR, true);
-                            folders.get(i).state = "State check has failed while in process. Folder has been renamed to " + renamed_folder + ". You will need to manually change it back to " + folder + ". PC may need to be restarted to edit the folder";
-                        }
-                    }
+                    RenameDirectory(users_directory, folder, folder);
                 } catch(CannotEditException e) {
                     String message = "Uneditable. User may be logged in or PC may need to be restarted";
                     LogMessage(message, LOG_TYPE.WARNING, true);
@@ -790,7 +805,7 @@ public class ProfileDeleter
     public void RenameDirectory(String directory, String folder, String folder_renamed) throws IOException, CannotEditException {
         try{
             LogMessage("Attempting to rename folder " + directory + folder + " to " + folder_renamed , LOG_TYPE.INFO, true);
-            String command = "REN \"" + directory + folder + "\" \"" + folder_renamed + "\"";
+            String command = "REN \"" + directory + folder + "\" \"" + folder_renamed + "\" && echo editable|| echo uneditable";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);	
             Process cmd_process = builder.start();
@@ -800,7 +815,7 @@ public class ProfileDeleter
             while((line = cmd_process_output_stream.readLine()) != null) {
                 error = line;
             }
-            if(error.compareTo("") != 0) {
+            if(error.compareTo("editable") != 0) {
                 String message = "Unable to rename folder " + directory + folder + ". Error is: " + error;
                 throw new CannotEditException(message);
             }
@@ -896,6 +911,105 @@ public class ProfileDeleter
             LogMessage("Successfully deleted folder " + directory, LOG_TYPE.INFO, true);
         } catch(CannotEditException | IOException e) {
             LogMessage("Could not delete folder " + directory, LOG_TYPE.ERROR, true);
+            LogMessage(e.getMessage(), LOG_TYPE.ERROR, true);
+            throw e;
+        }
+    }
+    
+    public void DeleteFilesInDirectory(String directory, List<String> files, List<String> do_not_delete) throws IOException, CannotEditException {
+        try{
+            LogMessage("Attempting to delete list of files in directory " + directory, LOG_TYPE.INFO, true);
+            for(String file : files) {
+                boolean delete = true;
+                if(do_not_delete != null) {
+                    for(String exclude_file : do_not_delete){ 
+                        if(file.compareTo(exclude_file) == 0) {
+                            delete = false;
+                        }
+                    }
+                }
+                if(delete) {
+                    String command = "del \"" + directory + "\\" + file + "\"";
+                    ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
+                    builder.redirectErrorStream(true);	
+                    Process cmd_process = builder.start();
+                    BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()));
+                    String line = "";
+                    String error = "";
+                    while((line = cmd_process_output_stream.readLine()) != null) {
+                        error = line;
+                    }
+                    if(error.compareTo("") != 0) {
+                        String message = "Unable to delete file " + directory + "\\" + file + ". Error is: " + error;
+                        LogMessage(message, LOG_TYPE.ERROR, true);
+                        throw new CannotEditException(message);
+                    }
+                    LogMessage("Successfully deleted file " + directory + "\\" + file, LOG_TYPE.INFO, true);
+                } else {
+                    LogMessage("File " + directory + "\\" + file + " is in do not delete list. It has not been deleted", LOG_TYPE.INFO, true);
+                }
+            }
+        } catch(CannotEditException | IOException e) {
+            LogMessage("Failed to delete all requested files in directory " + directory, LOG_TYPE.ERROR, true);
+            LogMessage(e.getMessage(), LOG_TYPE.ERROR, true);
+            throw e;
+        }
+    }
+    
+    public List<String> GetFileList(String directory) throws IOException, CannotEditException {
+        try{
+            LogMessage("Attempting to get list of files in directory " + directory, LOG_TYPE.INFO, true);
+            String command = "dir /b /a-d \"" + directory + "\"";
+            ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
+            builder.redirectErrorStream(true);	
+            Process cmd_process = builder.start();
+            BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()));
+            List<String> files = new ArrayList<String>();
+            String line = "";
+            String error = "";
+            while((line = cmd_process_output_stream.readLine()) != null) {
+                if(line.compareTo("") != 0) {
+                    files.add(line);
+                }
+                error = line;
+            }
+            if(error.compareTo("") != 0) {
+                String message = "Unable to get list of files in diectory " + directory + ". Error is: " + error;
+                LogMessage(message, LOG_TYPE.ERROR, true);
+                throw new CannotEditException(message);
+            } else {
+                LogMessage("Successfully got list of files in directory " + directory, LOG_TYPE.INFO, true);
+                return files;
+            }
+        } catch(CannotEditException | IOException e) {
+            LogMessage("Could not get list of files in directory " + directory, LOG_TYPE.ERROR, true);
+            LogMessage(e.getMessage(), LOG_TYPE.ERROR, true);
+            throw e;
+        }
+    }
+    
+    
+    public void DeleteFile(String full_file_name) throws IOException, CannotEditException {
+        try{
+            LogMessage("Attempting to delete file " + full_file_name, LOG_TYPE.INFO, true);
+            String command = "del \"" + full_file_name + "\"";
+            ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
+            builder.redirectErrorStream(true);	
+            Process cmd_process = builder.start();
+            BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()));
+            String line = "";
+            String error = "";
+            while((line = cmd_process_output_stream.readLine()) != null) {
+                error = line;
+            }
+            if(error.compareTo("") != 0) {
+                String message = "Unable to delete file " + full_file_name + ". Error is: " + error;
+                LogMessage(message, LOG_TYPE.ERROR, true);
+                throw new CannotEditException(message);
+            }
+            LogMessage("Successfully deleted file " + full_file_name, LOG_TYPE.INFO, true);
+        } catch(CannotEditException | IOException e) {
+            LogMessage("Could not delete file " + full_file_name, LOG_TYPE.ERROR, true);
             LogMessage(e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
         }
