@@ -2,6 +2,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
@@ -391,6 +392,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         system_console_text_area.setBackground(Color.BLACK);
         system_console_text_area.setForeground(Color.WHITE);
         system_console_text_area.setSelectedTextColor(Color.YELLOW);
+        system_console_text_area.setMargin(new Insets(0,2,0,0));
         system_console_scroll_pane = new JScrollPane(system_console_text_area);
         system_console_scroll_pane.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
             public void adjustmentValueChanged(AdjustmentEvent e) {
@@ -412,8 +414,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         system_console_gc.gridwidth = GridBagConstraints.REMAINDER;
         system_console_scroll_pane.setPreferredSize(new Dimension(100,100));
         
-        computer_name_text_field = new JTextField("Enter hostname or IP here");
-        computer_name_text_field.setBorder(new LineBorder(Color.BLACK, 1));
+        computer_name_text_field = new JTextField();
         computer_name_gc = new GridBagConstraints();
         computer_name_gc.fill = GridBagConstraints.BOTH;
         computer_name_gc.gridx = 0;
@@ -421,6 +422,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         computer_name_gc.gridwidth = 1;
         computer_name_gc.gridheight = 1;
         computer_name_gc.weightx = 1;
+        computer_name_gc.insets = new Insets(2,2,2,2);
         
         set_computer_button = new JButton("Set Computer");
         set_computer_button.setActionCommand("SetComputer");
@@ -1563,7 +1565,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
 
             log_list.add(log_message);
             if(display_to_console) {
-                system_console_text_area.append('\n' + " " + message);
+                system_console_text_area.append('\n' + message);
             }
             return log_message;
     }
