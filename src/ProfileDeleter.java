@@ -2,6 +2,10 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
 import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -29,6 +33,8 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.ScrollPaneConstants;
 import javax.swing.border.LineBorder;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
@@ -36,8 +42,9 @@ import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableModel;
+import javax.swing.text.DefaultCaret;
 
-public class ProfileDeleter extends JFrame implements TableModelListener
+public class ProfileDeleter extends JFrame implements TableModelListener, ActionListener
 {
     private String computer;
     private String users_directory;
@@ -57,8 +64,10 @@ public class ProfileDeleter extends JFrame implements TableModelListener
     private GridBagConstraints results_gc;
     private JScrollPane system_console_scroll_pane;
     private JTextArea system_console_text_area;
+    private int system_console_scrollbar_previous_maximum;
+    private int system_console_viewport_bottom;
     private GridBagConstraints system_console_gc;
-    private JTextArea computer_name_text_area;
+    private JTextField computer_name_text_field;
     private GridBagConstraints computer_name_gc;
     private JButton set_computer_button;
     private GridBagConstraints set_computer_gc;
@@ -376,22 +385,35 @@ public class ProfileDeleter extends JFrame implements TableModelListener
         
         system_console_text_area = new JTextArea("System Console");
         system_console_text_area.setEditable(false);
-        system_console_text_area.setBorder(new LineBorder(Color.BLACK, 1));
+        //DefaultCaret caret = (DefaultCaret)system_console_text_area.getCaret();
+        //caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+        //system_console_text_area.setBorder(new LineBorder(Color.WHITE, 1));
         system_console_text_area.setBackground(Color.BLACK);
         system_console_text_area.setForeground(Color.WHITE);
         system_console_text_area.setSelectedTextColor(Color.YELLOW);
         system_console_scroll_pane = new JScrollPane(system_console_text_area);
+        system_console_scroll_pane.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
+            public void adjustmentValueChanged(AdjustmentEvent e) {
+                if(system_console_scrollbar_previous_maximum - (system_console_scroll_pane.getViewport().getViewPosition().y + system_console_scroll_pane.getViewport().getViewRect().height) <= 1) {
+                    e.getAdjustable().setValue(e.getAdjustable().getMaximum());
+                }
+                system_console_scrollbar_previous_maximum = e.getAdjustable().getMaximum();
+            }
+        });
+        system_console_scroll_pane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+        system_console_scroll_pane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
+        system_console_scroll_pane.getVerticalScrollBar().setUnitIncrement(16);
+        system_console_scroll_pane.getVerticalScrollBar().setBlockIncrement(16);
+        system_console_scrollbar_previous_maximum = system_console_scroll_pane.getVerticalScrollBar().getMaximum();
         system_console_gc = new GridBagConstraints();
         system_console_gc.fill = GridBagConstraints.BOTH;
         system_console_gc.gridx = 0;
         system_console_gc.gridy = 2;
         system_console_gc.gridwidth = GridBagConstraints.REMAINDER;
         system_console_scroll_pane.setPreferredSize(new Dimension(100,100));
-        //system_console_gc.gridheight = 2;
-        //system_console_gc.weighty = 1;
         
-        computer_name_text_area = new JTextArea("Enter hostname or IP here");
-        computer_name_text_area.setBorder(new LineBorder(Color.BLACK, 1));
+        computer_name_text_field = new JTextField("Enter hostname or IP here");
+        computer_name_text_field.setBorder(new LineBorder(Color.BLACK, 1));
         computer_name_gc = new GridBagConstraints();
         computer_name_gc.fill = GridBagConstraints.BOTH;
         computer_name_gc.gridx = 0;
@@ -401,6 +423,8 @@ public class ProfileDeleter extends JFrame implements TableModelListener
         computer_name_gc.weightx = 1;
         
         set_computer_button = new JButton("Set Computer");
+        set_computer_button.setActionCommand("SetComputer");
+        set_computer_button.addActionListener(this);
         set_computer_gc = new GridBagConstraints();
         set_computer_gc.fill = GridBagConstraints.BOTH;
         set_computer_gc.gridx = 1;
@@ -475,6 +499,8 @@ public class ProfileDeleter extends JFrame implements TableModelListener
         registry_check_gc.gridheight = 1;
         
         rerun_checks_button = new JButton("Rerun Checks");
+        rerun_checks_button.setActionCommand("RerunChecks");
+        rerun_checks_button.addActionListener(this);
         rerun_checks_gc = new GridBagConstraints();
         rerun_checks_gc.fill = GridBagConstraints.BOTH;
         rerun_checks_gc.gridx = 5;
@@ -483,6 +509,8 @@ public class ProfileDeleter extends JFrame implements TableModelListener
         rerun_checks_gc.gridheight = 1;
         
         run_deletion_button = new JButton("Run Deletion");
+        run_deletion_button.setActionCommand("RunDeletion");
+        run_deletion_button.addActionListener(this);
         run_deletion_gc = new GridBagConstraints();
         run_deletion_gc.fill = GridBagConstraints.BOTH;
         run_deletion_gc.gridx = 6;
@@ -491,6 +519,8 @@ public class ProfileDeleter extends JFrame implements TableModelListener
         run_deletion_gc.gridheight = 1;
         
         write_log_button = new JButton("Write Log");
+        write_log_button.setActionCommand("WriteLog");
+        write_log_button.addActionListener(this);
         write_log_gc = new GridBagConstraints();
         write_log_gc.fill = GridBagConstraints.BOTH;
         write_log_gc.gridx = 7;
@@ -499,6 +529,8 @@ public class ProfileDeleter extends JFrame implements TableModelListener
         write_log_gc.gridheight = 1;
         
         exit_button = new JButton("Exit");
+        exit_button.setActionCommand("Exit");
+        exit_button.addActionListener(this);
         exit_gc = new GridBagConstraints();
         exit_gc.fill = GridBagConstraints.BOTH;
         exit_gc.gridx = 8;
@@ -506,7 +538,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener
         exit_gc.gridwidth = 1;
         exit_gc.gridheight = 1;
         
-        getContentPane().add(computer_name_text_area, computer_name_gc);
+        getContentPane().add(computer_name_text_field, computer_name_gc);
         getContentPane().add(set_computer_button, set_computer_gc);
         getContentPane().add(size_check_panel, size_check_gc);
         getContentPane().add(state_check_panel, state_check_gc);
@@ -757,6 +789,35 @@ public class ProfileDeleter extends JFrame implements TableModelListener
         ((DeleterTableModel)results_table.getModel()).setRowData(ConvertFoldersTo2DObjectArray());
         results_table.setAutoCreateRowSorter(true);
         ((DeleterTableModel)results_table.getModel()).fireTableDataChanged();*/
+    }
+    
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        if ("SetComputer" == e.getActionCommand()) {
+            SetComputerButton();
+        } else if ("RerunChecks" == e.getActionCommand()) {
+            RerunChecksButton();
+        } else if ("RunDeletion" == e.getActionCommand()) {
+            RunDeletionButton();
+        } else if ("Exit" == e.getActionCommand()) {
+            ExitButton();
+        }
+    }
+    
+    public void SetComputerButton() {
+        
+    }
+    
+    public void RerunChecksButton() {
+        
+    }
+    
+    public void RunDeletionButton() {
+        
+    }
+    
+    public void ExitButton() {
+        System.exit(0);
     }
     
     public void BackupAndCopyRegistry() throws IOException, InterruptedException, CannotEditException, NotInitialisedException {
@@ -1431,7 +1492,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener
     }
 
     public String PrintDirectory() {
-        LogMessage("Compiling directory list into readable String", LOG_TYPE.INFO, true);
+        LogMessage("Compiling directory list into readable String", LOG_TYPE.INFO, true, false);
         String output = "";
         Double total_size = 0.0;
         output += UserAccount.HeadingsToString();
@@ -1451,7 +1512,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener
             Double size_in_megabytes = total_size / (1024.0 * 1024.0);
             output += '\n' + "Total size:" + '\t' + (size_in_megabytes + " MB"); 
         }
-        LogMessage("Successfully compiled directory list into readable String", LOG_TYPE.INFO, true);
+        LogMessage("Successfully compiled directory list into readable String", LOG_TYPE.INFO, true, false);
         return output;
     }
 
@@ -1471,6 +1532,11 @@ public class ProfileDeleter extends JFrame implements TableModelListener
     }
 
     public String LogMessage(String message, LOG_TYPE state, boolean include_timestamp) {
+        String log_message = LogMessage(message, state, include_timestamp, true);
+        return log_message;
+    }
+    
+    public String LogMessage(String message, LOG_TYPE state, boolean include_timestamp, boolean display_to_console) {
             String log_message = "";
             if(null != state) switch (state) {
             case INFO:
@@ -1496,6 +1562,9 @@ public class ProfileDeleter extends JFrame implements TableModelListener
             log_message += message;
 
             log_list.add(log_message);
+            if(display_to_console) {
+                system_console_text_area.append('\n' + " " + message);
+            }
             return log_message;
     }
 
