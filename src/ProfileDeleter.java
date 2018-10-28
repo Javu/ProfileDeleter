@@ -1,4 +1,7 @@
+import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -16,9 +19,17 @@ import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.JTextArea;
+import javax.swing.border.LineBorder;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.AbstractTableModel;
@@ -32,7 +43,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener
     private String users_directory;
     private String remote_data_directory;
     private String local_data_directory;
-    public List<UserAccount> folders;
+    private List<UserAccount> folders;
     private List<String> log_list;
     private String session_id;
     private boolean size_check;
@@ -40,9 +51,43 @@ public class ProfileDeleter extends JFrame implements TableModelListener
     private boolean reg_check;
     private boolean sid_guid_check_complete;
     public BufferedReader console_in;
+    
     private JScrollPane results_scroll_pane;
     private JTable results_table;
     private GridBagConstraints results_gc;
+    private JScrollPane system_console_scroll_pane;
+    private JTextArea system_console_text_area;
+    private GridBagConstraints system_console_gc;
+    private JTextArea computer_name_text_area;
+    private GridBagConstraints computer_name_gc;
+    private JButton set_computer_button;
+    private GridBagConstraints set_computer_gc;
+    private JButton rerun_checks_button;
+    private GridBagConstraints rerun_checks_gc;
+    private JButton run_deletion_button;
+    private GridBagConstraints run_deletion_gc;
+    private JButton write_log_button;
+    private GridBagConstraints write_log_gc;
+    private JButton exit_button;
+    private GridBagConstraints exit_gc;
+    private JPanel size_check_panel;
+    private JCheckBox size_check_checkbox;
+    private GridBagConstraints size_check_checkbox_gc;
+    private JLabel size_check_label;
+    private GridBagConstraints size_check_label_gc;
+    private GridBagConstraints size_check_gc;
+    private JPanel state_check_panel;
+    private JCheckBox state_check_checkbox;
+    private GridBagConstraints state_check_checkbox_gc;
+    private JLabel state_check_label;
+    private GridBagConstraints state_check_label_gc;
+    private GridBagConstraints state_check_gc;
+    private JPanel registry_check_panel;
+    private JCheckBox registry_check_checkbox;
+    private GridBagConstraints registry_check_checkbox_gc;
+    private JLabel registry_check_label;
+    private GridBagConstraints registry_check_label_gc;
+    private GridBagConstraints registry_check_gc;
 
     public enum LOG_TYPE {
         INFO(0),
@@ -258,6 +303,8 @@ public class ProfileDeleter extends JFrame implements TableModelListener
     }
 
     public ProfileDeleter() {
+        super("Profile Deleter");
+        
         computer = "";
         users_directory = "";
         remote_data_directory = "";
@@ -271,6 +318,10 @@ public class ProfileDeleter extends JFrame implements TableModelListener
         sid_guid_check_complete = false;
         console_in = new BufferedReader(new InputStreamReader(System.in));
         
+        setMinimumSize(new Dimension(950, 600));
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        getContentPane().setLayout(new GridBagLayout());
+        
         String[] columnToolTips = {
             "Cannot delete if state is not Editable and cannot delete the Public account",
             null,
@@ -280,7 +331,6 @@ public class ProfileDeleter extends JFrame implements TableModelListener
             null,
             null
         };
-        //DeleterTableModel table_model = new DeleterTableModel();
         results_table = new JTable(new DefaultTableModel()) {
            public String getToolTipText(MouseEvent e) {
                String tip = null;
@@ -316,9 +366,157 @@ public class ProfileDeleter extends JFrame implements TableModelListener
         //results_table.setAutoCreateRowSorter(true);
         //results_table.getModel().addTableModelListener(this);
         results_scroll_pane = new JScrollPane(results_table);
+        results_scroll_pane.setBorder(new LineBorder(Color.BLACK, 2));
         results_gc = new GridBagConstraints();
+        results_gc.fill = GridBagConstraints.BOTH;
+        results_gc.gridx = 0;
+        results_gc.gridy = 1;
+        results_gc.gridwidth = GridBagConstraints.REMAINDER;
+        results_gc.weighty = 1;
         
-        getContentPane().add(results_scroll_pane);
+        system_console_text_area = new JTextArea("System Console");
+        system_console_text_area.setEditable(false);
+        system_console_text_area.setBorder(new LineBorder(Color.BLACK, 1));
+        system_console_text_area.setBackground(Color.BLACK);
+        system_console_text_area.setForeground(Color.WHITE);
+        system_console_text_area.setSelectedTextColor(Color.YELLOW);
+        system_console_scroll_pane = new JScrollPane(system_console_text_area);
+        system_console_gc = new GridBagConstraints();
+        system_console_gc.fill = GridBagConstraints.BOTH;
+        system_console_gc.gridx = 0;
+        system_console_gc.gridy = 2;
+        system_console_gc.gridwidth = GridBagConstraints.REMAINDER;
+        system_console_scroll_pane.setPreferredSize(new Dimension(100,100));
+        //system_console_gc.gridheight = 2;
+        //system_console_gc.weighty = 1;
+        
+        computer_name_text_area = new JTextArea("Enter hostname or IP here");
+        computer_name_text_area.setBorder(new LineBorder(Color.BLACK, 1));
+        computer_name_gc = new GridBagConstraints();
+        computer_name_gc.fill = GridBagConstraints.BOTH;
+        computer_name_gc.gridx = 0;
+        computer_name_gc.gridy = 0;
+        computer_name_gc.gridwidth = 1;
+        computer_name_gc.gridheight = 1;
+        computer_name_gc.weightx = 1;
+        
+        set_computer_button = new JButton("Set Computer");
+        set_computer_gc = new GridBagConstraints();
+        set_computer_gc.fill = GridBagConstraints.BOTH;
+        set_computer_gc.gridx = 1;
+        set_computer_gc.gridy = 0;
+        set_computer_gc.gridwidth = 1;
+        set_computer_gc.gridheight = 1;
+        
+        size_check_checkbox = new JCheckBox();
+        size_check_checkbox.setSelected(true);
+        size_check_checkbox_gc = new GridBagConstraints();
+        size_check_checkbox_gc.gridx = 0;
+        size_check_checkbox_gc.gridy = 0;
+        size_check_label = new JLabel("Size Check");
+        size_check_label_gc = new GridBagConstraints();
+        size_check_label_gc.fill = GridBagConstraints.BOTH;
+        size_check_label_gc.gridx = 1;
+        size_check_label_gc.gridy = 0;
+        size_check_label_gc.gridwidth = GridBagConstraints.REMAINDER;
+        size_check_label_gc.weightx = 1;
+        size_check_panel = new JPanel();
+        size_check_panel.add(size_check_checkbox, size_check_checkbox_gc);
+        size_check_panel.add(size_check_label, size_check_label_gc);
+        size_check_gc = new GridBagConstraints();
+        size_check_gc.fill = GridBagConstraints.BOTH;
+        size_check_gc.gridx = 2;
+        size_check_gc.gridy = 0;
+        size_check_gc.gridwidth = 1;
+        size_check_gc.gridheight = 1;
+        
+        state_check_checkbox = new JCheckBox();
+        state_check_checkbox.setSelected(true);
+        state_check_checkbox_gc = new GridBagConstraints();
+        state_check_checkbox_gc.gridx = 0;
+        state_check_checkbox_gc.gridy = 0;
+        state_check_label = new JLabel("Size Check");
+        state_check_label_gc = new GridBagConstraints();
+        state_check_label_gc.fill = GridBagConstraints.BOTH;
+        state_check_label_gc.gridx = 1;
+        state_check_label_gc.gridy = 0;
+        state_check_label_gc.gridwidth = GridBagConstraints.REMAINDER;
+        state_check_label_gc.weightx = 1;
+        state_check_panel = new JPanel();
+        state_check_panel.add(state_check_checkbox, state_check_checkbox_gc);
+        state_check_panel.add(state_check_label, state_check_label_gc);
+        state_check_gc = new GridBagConstraints();
+        state_check_gc.fill = GridBagConstraints.BOTH;
+        state_check_gc.gridx = 3;
+        state_check_gc.gridy = 0;
+        state_check_gc.gridwidth = 1;
+        state_check_gc.gridheight = 1;
+        
+        registry_check_checkbox = new JCheckBox();
+        registry_check_checkbox.setSelected(true);
+        registry_check_checkbox_gc = new GridBagConstraints();
+        registry_check_checkbox_gc.gridx = 0;
+        registry_check_checkbox_gc.gridy = 0;
+        registry_check_label = new JLabel("Size Check");
+        registry_check_label_gc = new GridBagConstraints();
+        registry_check_label_gc.fill = GridBagConstraints.BOTH;
+        registry_check_label_gc.gridx = 1;
+        registry_check_label_gc.gridy = 0;
+        registry_check_label_gc.gridwidth = GridBagConstraints.REMAINDER;
+        registry_check_label_gc.weightx = 1;
+        registry_check_panel = new JPanel();
+        registry_check_panel.add(registry_check_checkbox, registry_check_checkbox_gc);
+        registry_check_panel.add(registry_check_label, registry_check_label_gc);
+        registry_check_gc = new GridBagConstraints();
+        registry_check_gc.fill = GridBagConstraints.BOTH;
+        registry_check_gc.gridx = 4;
+        registry_check_gc.gridy = 0;
+        registry_check_gc.gridwidth = 1;
+        registry_check_gc.gridheight = 1;
+        
+        rerun_checks_button = new JButton("Rerun Checks");
+        rerun_checks_gc = new GridBagConstraints();
+        rerun_checks_gc.fill = GridBagConstraints.BOTH;
+        rerun_checks_gc.gridx = 5;
+        rerun_checks_gc.gridy = 0;
+        rerun_checks_gc.gridwidth = 1;
+        rerun_checks_gc.gridheight = 1;
+        
+        run_deletion_button = new JButton("Run Deletion");
+        run_deletion_gc = new GridBagConstraints();
+        run_deletion_gc.fill = GridBagConstraints.BOTH;
+        run_deletion_gc.gridx = 6;
+        run_deletion_gc.gridy = 0;
+        run_deletion_gc.gridwidth = 1;
+        run_deletion_gc.gridheight = 1;
+        
+        write_log_button = new JButton("Write Log");
+        write_log_gc = new GridBagConstraints();
+        write_log_gc.fill = GridBagConstraints.BOTH;
+        write_log_gc.gridx = 7;
+        write_log_gc.gridy = 0;
+        write_log_gc.gridwidth = 1;
+        write_log_gc.gridheight = 1;
+        
+        exit_button = new JButton("Exit");
+        exit_gc = new GridBagConstraints();
+        exit_gc.fill = GridBagConstraints.BOTH;
+        exit_gc.gridx = 8;
+        exit_gc.gridy = 0;
+        exit_gc.gridwidth = 1;
+        exit_gc.gridheight = 1;
+        
+        getContentPane().add(computer_name_text_area, computer_name_gc);
+        getContentPane().add(set_computer_button, set_computer_gc);
+        getContentPane().add(size_check_panel, size_check_gc);
+        getContentPane().add(state_check_panel, state_check_gc);
+        getContentPane().add(registry_check_panel, registry_check_gc);
+        getContentPane().add(rerun_checks_button, rerun_checks_gc);
+        getContentPane().add(run_deletion_button, run_deletion_gc);
+        getContentPane().add(write_log_button, write_log_gc);
+        getContentPane().add(exit_button, exit_gc);
+        getContentPane().add(results_scroll_pane, results_gc);
+        getContentPane().add(system_console_scroll_pane, system_console_gc);
         pack();
         setVisible(true);
     }
