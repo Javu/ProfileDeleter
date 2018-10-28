@@ -1,3 +1,5 @@
+import java.awt.GridBagConstraints;
+import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -14,14 +16,23 @@ import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
+import javax.swing.JFrame;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.event.TableModelEvent;
+import javax.swing.event.TableModelListener;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableModel;
 
-public class ProfileDeleter
+public class ProfileDeleter extends JFrame implements TableModelListener
 {
     private String computer;
     private String users_directory;
     private String remote_data_directory;
     private String local_data_directory;
-    private List<UserAccount> folders;
+    public List<UserAccount> folders;
     private List<String> log_list;
     private String session_id;
     private boolean size_check;
@@ -29,6 +40,9 @@ public class ProfileDeleter
     private boolean reg_check;
     private boolean sid_guid_check_complete;
     public BufferedReader console_in;
+    private JScrollPane results_scroll_pane;
+    private JTable results_table;
+    private GridBagConstraints results_gc;
 
     public enum LOG_TYPE {
         INFO(0),
@@ -156,6 +170,7 @@ public class ProfileDeleter
                                     error = e.getMessage();
                                 }
                             }
+                            deleter.UpdateTableData();
                         } else {
                             error = "No computer set, please set a computer first";
                         }
@@ -171,6 +186,7 @@ public class ProfileDeleter
                                         error += '\n';
                                     }
                                 }
+                                deleter.UpdateTableData();
                             } else {
                                 error = "Deletion has been run but nothing was flagged for deletion";
                             }
@@ -226,6 +242,7 @@ public class ProfileDeleter
                                     error = e.getMessage();
                                 }
                             }
+                            deleter.UpdateTableData();
                             menu = 1;
                         } else {
                             error = "Cannot ping computer " + option;
@@ -253,6 +270,57 @@ public class ProfileDeleter
         reg_check = true;
         sid_guid_check_complete = false;
         console_in = new BufferedReader(new InputStreamReader(System.in));
+        
+        String[] columnToolTips = {
+            "Cannot delete if state is not Editable and cannot delete the Public account",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        };
+        //DeleterTableModel table_model = new DeleterTableModel();
+        results_table = new JTable(new DefaultTableModel()) {
+           public String getToolTipText(MouseEvent e) {
+               String tip = null;
+               java.awt.Point p = e.getPoint();
+               int rowIndex = rowAtPoint(p);
+               int colIndex = columnAtPoint(p);
+               int realColumnIndex = convertColumnIndexToModel(colIndex);
+               int realRowIndex = convertRowIndexToModel(rowIndex);
+               
+               if(realColumnIndex == 0) {
+                   TableModel model = getModel();
+                   String editable = (String)model.getValueAt(realRowIndex, 4);
+                   String name = (String)model.getValueAt(realRowIndex, 1);
+                   if(editable.compareTo("Editable") != 0 || name.compareTo("Public") == 0) {
+                       tip = "Cannot delete if state is not Editable and cannot delete the Public account";
+                   }
+               }
+               return tip;
+           }
+           protected JTableHeader createDefaultTableHeader() {
+                return new JTableHeader(columnModel) {
+                    public String getToolTipText(MouseEvent e) {
+                        String tip = null;
+                        java.awt.Point p = e.getPoint();
+                        int index = columnModel.getColumnIndexAtX(p.x);
+                        int realIndex = columnModel.getColumn(index).getModelIndex();
+                        return columnToolTips[realIndex];
+                    }
+                };
+            }
+        };
+        UpdateTableData();
+        //results_table.setAutoCreateRowSorter(true);
+        //results_table.getModel().addTableModelListener(this);
+        results_scroll_pane = new JScrollPane(results_table);
+        results_gc = new GridBagConstraints();
+        
+        getContentPane().add(results_scroll_pane);
+        pack();
+        setVisible(true);
     }
 
     public void SetComputer(String computer) {
@@ -283,7 +351,7 @@ public class ProfileDeleter
                 boolean found_user = false;
                 for(UserAccount user : folders) {
                     if(name.compareTo(user.name) == 0) {
-                        if(user.state.compareTo("OK") == 0) {
+                        if(user.state.compareTo("Editable") == 0) {
                             user.delete = delete;
                             found_user = true;
                             LogMessage("Set delete to " + delete + " for user " + name, LOG_TYPE.INFO, true);
@@ -361,6 +429,14 @@ public class ProfileDeleter
         return false;
     }
 
+    public Object[][] ConvertFoldersTo2DObjectArray() {
+        Object[][] object_array = new Object[folders.size()][];
+        for(int i=0;i<folders.size();i++) {
+            object_array[i] = folders.get(i).ToObjectArray();
+        }
+        return object_array;
+    }
+    
     public List<String> ProcessDeletion() throws NotInitialisedException {
         LogMessage("Attempting to run deletion on users list", LOG_TYPE.INFO, true);
         if(folders != null && !folders.isEmpty() && sid_guid_check_complete) {
@@ -421,6 +497,68 @@ public class ProfileDeleter
             LogMessage(message, LOG_TYPE.WARNING, true);
             throw new NotInitialisedException(message);
         }
+    }
+    
+    public void UpdateTableData() {
+        results_table.setModel(new AbstractTableModel () {
+            private String[] columnNames = UserAccount.HeadingsToStringArray();
+            private Object[][] rowData = ConvertFoldersTo2DObjectArray();
+            
+            public String getColumnName(int col) {
+                return columnNames[col].toString();
+            }
+            public int getRowCount() { return rowData.length; }
+            public int getColumnCount() { return columnNames.length; }
+            public Object getValueAt(int row, int col) {
+                return rowData[row][col];
+            }
+            public Class getColumnClass(int col) {
+                if(col == 0) {
+                    try {
+                        return Class.forName("java.lang.Boolean");
+                    } catch (ClassNotFoundException ex) {
+                        System.out.println("Couldn't find class");
+                        try {
+                            //return getValueAt(0, col).getClass();
+                            return Class.forName("java.lang.String");
+                        } catch (ClassNotFoundException ex1) {
+                            System.out.println("Couldn't find class");
+                        }
+                    }
+                } else {
+                    try {
+                        //return getValueAt(0, col).getClass();
+                        return Class.forName("java.lang.String");
+                    } catch (ClassNotFoundException ex) {
+                        System.out.println("Couldn't find class");
+                    }
+                }
+                return null;
+            }
+            public boolean isCellEditable(int row, int col)
+            {
+                
+                if(col == 0 && getValueAt(row, 4) == "Editable" && getValueAt(row, 1) != "Public") {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+            public void setValueAt(Object value, int row, int col) {
+                rowData[row][col] = value;
+                fireTableCellUpdated(row, col);
+            }
+            public void setRowData(Object[][] row_data) {
+                rowData = row_data;
+            }
+        });
+        results_table.setAutoCreateRowSorter(true);
+        results_table.getModel().addTableModelListener(this);
+        
+        /*
+        ((DeleterTableModel)results_table.getModel()).setRowData(ConvertFoldersTo2DObjectArray());
+        results_table.setAutoCreateRowSorter(true);
+        ((DeleterTableModel)results_table.getModel()).fireTableDataChanged();*/
     }
     
     public void BackupAndCopyRegistry() throws IOException, InterruptedException, CannotEditException, NotInitialisedException {
@@ -686,7 +824,11 @@ public class ProfileDeleter
                                     LogMessage("Discovered folder details " + line, LOG_TYPE.INFO, true);
                                     String[] line_split = line.split("\\t");
                                     UserAccount folder = new UserAccount();
-                                    folder.delete = false;
+                                    if(line_split[0].compareTo("Public") == 0) {
+                                        folder.delete = false;
+                                    } else {
+                                        folder.delete = true;
+                                    }
                                     folder.name = line_split[0];
                                     folder.last_updated = line_split[1];
                                     folder.size = "";
@@ -718,10 +860,12 @@ public class ProfileDeleter
                 try {
                     RenameDirectory(computer, "C:\\users\\", folder, folder);
                     folders.get(i).state = "Editable";
+                    folders.get(i).delete = true;
                 } catch(CannotEditException e) {
                     String message = "Uneditable. User may be logged in or PC may need to be restarted";
                     LogMessage(message, LOG_TYPE.WARNING, true);
                     folders.get(i).state = message;
+                    folders.get(i).delete = false;
                 } catch(IOException e) {
                     LogMessage("Editable state check has failed", LOG_TYPE.ERROR, true);
                     LogMessage(e.getMessage(), LOG_TYPE.ERROR, true);
@@ -1242,5 +1386,15 @@ public class ProfileDeleter
         }
         LogMessage("Ping check has completed successfully, result is " + pc_online, LOG_TYPE.INFO, true);
         return pc_online;
+    }
+    
+    @Override
+    public void tableChanged(TableModelEvent e) {
+        int row = e.getFirstRow();
+        int column = e.getColumn();
+        TableModel model = (TableModel)e.getSource();
+        Object data = model.getValueAt(row, column);
+        
+        folders.get(row).delete = Boolean.parseBoolean(data.toString());
     }
 }

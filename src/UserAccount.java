@@ -34,6 +34,18 @@ public class UserAccount {
         this.sid = sid;
         this.guid = guid;
     }
+    public static String[] HeadingsToStringArray() {
+        String[] string_array = new String[HEADINGS.size()];
+        for(int i=0;i<HEADINGS.size();i++) {
+            string_array[i] = HEADINGS.get(i);
+        }
+        return string_array;
+    }
+    
+    public Object[] ToObjectArray() {
+        Object[] object_array = {delete, name, last_updated, size, state, sid, guid};
+        return object_array;
+    }
     
     public String ToString() {
         String output = "";
