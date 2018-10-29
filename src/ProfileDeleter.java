@@ -58,6 +58,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     private boolean size_check;
     private boolean state_check;
     private boolean reg_check;
+    private boolean size_check_complete;
     private boolean state_check_complete;
     private boolean registry_check_complete;
     public BufferedReader console_in;
@@ -90,6 +91,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     
     private SetComputerThread set_computer_thread;
     private RerunChecksThread rerun_checks_thread;
+    private RunDeletionThread run_deletion_thread;
     private WriteLogThread write_log_thread;
 
     public enum LOG_TYPE {
@@ -318,6 +320,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         size_check = false;
         state_check = true;
         reg_check = true;
+        size_check_complete = false;
         state_check_complete = false;
         registry_check_complete = false;
         console_in = new BufferedReader(new InputStreamReader(System.in));
@@ -807,7 +810,16 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
     
     public void RunDeletionButton() {
-        
+        computer_name_text_field.setEnabled(false);
+        set_computer_button.setEnabled(false);
+        size_check_checkbox.setEnabled(false);
+        state_check_checkbox.setEnabled(false);
+        registry_check_checkbox.setEnabled(false);
+        rerun_checks_button.setEnabled(false);
+        run_deletion_button.setEnabled(false);
+        write_log_button.setEnabled(false);
+        results_table.setEnabled(false);
+        (run_deletion_thread = new RunDeletionThread()).execute();
     }
     
     public void WriteLogButton() {
@@ -1178,6 +1190,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
             }
             //Double size_in_megabytes = total_size / (1024.0 * 1024.0);
             setTitle("Profile Deleter - " + computer + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
+            size_check_complete = true;
             LogMessage("Finished calculating size of directory list", LOG_TYPE.INFO, true);
         } else {
             LogMessage("Directory list is empty, aborting size calculation", LOG_TYPE.WARNING, true);
@@ -1697,6 +1710,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         protected Object doInBackground() throws Exception {
             ping_success = pingPC(computer_name_text_field.getText());
             if(ping_success) {
+                size_check_complete = false;
                 state_check_complete = false;
                 registry_check_complete = false;
                 SetComputer(computer_name_text_field.getText());
@@ -1800,6 +1814,51 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                 LogMessage("Successfully wrote log to file " + WriteLog(), LOG_TYPE.INFO, true);
             } catch (IOException | NotInitialisedException e) {
                 LogMessage("Failed to write log to file. Error is " + e.getMessage(), LOG_TYPE.ERROR, true);
+            }
+            return new Object();
+        }
+        
+        @Override
+        public void done() {
+            if(state_check_complete && registry_check_complete) {
+                run_deletion_button.setEnabled(true);
+            }
+            rerun_checks_button.setEnabled(true);
+            computer_name_text_field.setEnabled(true);
+            set_computer_button.setEnabled(true);
+            size_check_checkbox.setEnabled(true);
+            state_check_checkbox.setEnabled(true);
+            registry_check_checkbox.setEnabled(true);
+            write_log_button.setEnabled(true);
+            results_table.setEnabled(true);
+        }
+    }
+    
+    private class RunDeletionThread extends SwingWorker<Object, Object> {
+        @Override
+        protected Object doInBackground() throws Exception {
+            try {
+                List<String> deleted_users = ProcessDeletion();
+                deleted_users.add(0, "Deletion report:");
+                if(deleted_users.size() > 2) {
+                    for(String deleted_user : deleted_users) {
+                        system_console_text_area.append('\n' + deleted_user);
+                    }
+                    String suffix = GenerateDateString();
+                    WriteToFile("reports\\" + computer + "_deletion_report_" + suffix + ".txt", deleted_users);
+                    LogMessage("Deletion report written to file reports\\" + computer + "_deletion_report_" + suffix + ".txt", LOG_TYPE.INFO, true);
+                    UpdateTableData();
+                    if(size_check_complete) {
+                        double total_size = 0.0;
+                        for(UserAccount user : folders) {
+                            total_size += Double.parseDouble(user.size);
+                        }
+                        setTitle("Profile Deleter - " + computer + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
+                    }
+                } else {
+                    LogMessage("Nothing was flagged for deletion", LOG_TYPE.WARNING, true);
+                }
+            } catch(NotInitialisedException | IOException e) {
             }
             return new Object();
         }
