@@ -21,16 +21,10 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Pattern;
-import javax.swing.Icon;
-import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
@@ -44,7 +38,6 @@ import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableModel;
-import javax.swing.text.DefaultCaret;
 
 public class ProfileDeleter extends JFrame implements TableModelListener, ActionListener
 {
@@ -701,6 +694,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
     
     public void UpdateTableData() {
+        results_table.getModel().removeTableModelListener(this);
         results_table.setModel(new AbstractTableModel () {
             private String[] columnNames = UserAccount.HeadingsToStringArray();
             private Object[][] rowData = ConvertFoldersTo2DObjectArray();
@@ -1745,7 +1739,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         
         @Override
         public void done() {
-            if(ping_success) {
+            if(ping_success || (computer != null && !computer.isEmpty())) {
                 rerun_checks_button.setEnabled(true);
             }
             if(state_check_complete && registry_check_complete) {

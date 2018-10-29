@@ -16,4 +16,3 @@ To do:
 * Different colour for undeletable rows.
 
 Bugs:
-* Set Computer button doesn't re-enable Rerun Checks button if you have already previously set a computer successfully and fail to try and set another one.
