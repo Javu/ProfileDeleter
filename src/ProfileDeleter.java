@@ -673,6 +673,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                     run = false;
                 } catch(IOException | CannotEditException e) {
                     if(count > 29) {
+                        /*
                         LogMessage("Back up of registry key has failed too many times. You may not have permission to backup the registry, you may not have permissions to create folders and files in \\\\" + computer + "\\C$\\temp, or the drive may not have a couple of MB free to create the registry backups needed. Check permissions or delete some files from the remote PC. Awaiting prompt from user", LOG_TYPE.WARNING, true);
                         System.out.println("Failed to backup registry file \"HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\ProfileList\". You may not have permission to backup the registry, you may not have permissions to create folders and files in \\\\" + computer + "\\C$\\temp, or the drive may not have a couple of MB free to create the registry backups needed.");
                         System.out.println("1. Retry (it is recommended you manually delete a few MB of files before retrying)");
@@ -697,7 +698,8 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                         } else {
                             System.out.println("Invalid option");
                             System.out.println("");
-                        }
+                        }*/
+                        throw e;
                     } else {
                         LogMessage("Attempt " + Integer.toString(count+1) + " at backing up registry key failed", LOG_TYPE.WARNING, true);
                         count++;
@@ -711,7 +713,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                     BackupRegistry(computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid", "C:\\temp\\Profile_Deleter\\" + session_id + "\\" + filename_friendly_computer + "_ProfileGuid.reg");
                     run = false;
                 } catch(IOException | CannotEditException e) {
-                    if(count > 29) {
+                    if(count > 29) {/*
                         LogMessage("Back up of registry key has failed too many times. You may not have permission to backup the registry, you may not have permissions to create folders and files in \\\\" + computer + "\\C$\\temp, or the drive may not have a couple of MB free to create the registry backups needed. Check permissions or delete some files from the remote PC. Awaiting prompt from user", LOG_TYPE.WARNING, true);
                         System.out.println("Failed to backup registry file \"HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\ProfileGuid\". You may not have permission to backup the registry, you may not have permissions to create folders and files in \\\\" + computer + "\\C$\\temp, or the drive may not have a couple of MB free to create the registry backups needed.");
                         System.out.println("1. Retry (it is recommended you manually delete a few MB of files before retrying)");
@@ -736,7 +738,8 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                         } else {
                             System.out.println("Invalid option");
                             System.out.println("");
-                        }
+                        }*/
+                        throw e;
                     } else {
                         LogMessage("Attempt " + Integer.toString(count+1) + " at backing up registry key failed", LOG_TYPE.WARNING, true);
                         count++;
@@ -1538,6 +1541,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                             } catch(IOException | NotInitialisedException e) {
                             }
                         } catch(IOException | CannotEditException | NotInitialisedException | InterruptedException e) {
+                            LogMessage("Unable to backup registry files, error is: " + e.getMessage(), LOG_TYPE.ERROR, true);
                         }
                     } catch(IOException | CannotEditException | NotInitialisedException e) {
                     }
@@ -1588,6 +1592,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                             } catch(IOException | NotInitialisedException e) {
                             }
                         } catch(IOException | CannotEditException | NotInitialisedException | InterruptedException e) {
+                            LogMessage("Unable to backup registry files, error is: " + e.getMessage(), LOG_TYPE.ERROR, true);
                         }
                     } catch(IOException | CannotEditException | NotInitialisedException e) {
                     }
