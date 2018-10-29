@@ -36,6 +36,7 @@ import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingWorker;
 import javax.swing.border.LineBorder;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
@@ -57,7 +58,8 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     private boolean size_check;
     private boolean state_check;
     private boolean reg_check;
-    private boolean sid_guid_check_complete;
+    private boolean state_check_complete;
+    private boolean registry_check_complete;
     public BufferedReader console_in;
     
     private JScrollPane results_scroll_pane;
@@ -66,7 +68,6 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     private JScrollPane system_console_scroll_pane;
     private JTextArea system_console_text_area;
     private int system_console_scrollbar_previous_maximum;
-    private int system_console_viewport_bottom;
     private GridBagConstraints system_console_gc;
     private JTextField computer_name_text_field;
     private GridBagConstraints computer_name_gc;
@@ -80,24 +81,16 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     private GridBagConstraints write_log_gc;
     private JButton exit_button;
     private GridBagConstraints exit_gc;
-    private JPanel size_check_panel;
     private JCheckBox size_check_checkbox;
-    private GridBagConstraints size_check_checkbox_gc;
-    private JLabel size_check_label;
-    private GridBagConstraints size_check_label_gc;
     private GridBagConstraints size_check_gc;
-    private JPanel state_check_panel;
     private JCheckBox state_check_checkbox;
-    private GridBagConstraints state_check_checkbox_gc;
-    private JLabel state_check_label;
-    private GridBagConstraints state_check_label_gc;
     private GridBagConstraints state_check_gc;
-    private JPanel registry_check_panel;
     private JCheckBox registry_check_checkbox;
-    private GridBagConstraints registry_check_checkbox_gc;
-    private JLabel registry_check_label;
-    private GridBagConstraints registry_check_label_gc;
     private GridBagConstraints registry_check_gc;
+    
+    private SetComputerThread set_computer_thread;
+    private RerunChecksThread rerun_checks_thread;
+    private WriteLogThread write_log_thread;
 
     public enum LOG_TYPE {
         INFO(0),
@@ -322,10 +315,11 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         folders = new ArrayList<>();
         log_list = new ArrayList<>();
         session_id = "";
-        size_check = true;
+        size_check = false;
         state_check = true;
         reg_check = true;
-        sid_guid_check_complete = false;
+        state_check_complete = false;
+        registry_check_complete = false;
         console_in = new BufferedReader(new InputStreamReader(System.in));
         
         setMinimumSize(new Dimension(950, 600));
@@ -435,20 +429,10 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         set_computer_gc.gridheight = 1;
         
         size_check_checkbox = new JCheckBox();
-        size_check_checkbox.setSelected(true);
-        size_check_checkbox_gc = new GridBagConstraints();
-        size_check_checkbox_gc.gridx = 0;
-        size_check_checkbox_gc.gridy = 0;
-        size_check_label = new JLabel("Size Check");
-        size_check_label_gc = new GridBagConstraints();
-        size_check_label_gc.fill = GridBagConstraints.BOTH;
-        size_check_label_gc.gridx = 1;
-        size_check_label_gc.gridy = 0;
-        size_check_label_gc.gridwidth = GridBagConstraints.REMAINDER;
-        size_check_label_gc.weightx = 1;
-        size_check_panel = new JPanel();
-        size_check_panel.add(size_check_checkbox, size_check_checkbox_gc);
-        size_check_panel.add(size_check_label, size_check_label_gc);
+        size_check_checkbox.setSelected(false);
+        size_check_checkbox.setText("Size Check");
+        size_check_checkbox.setActionCommand("SizeCheckToggle");
+        size_check_checkbox.addActionListener(this);
         size_check_gc = new GridBagConstraints();
         size_check_gc.fill = GridBagConstraints.BOTH;
         size_check_gc.gridx = 2;
@@ -458,19 +442,9 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         
         state_check_checkbox = new JCheckBox();
         state_check_checkbox.setSelected(true);
-        state_check_checkbox_gc = new GridBagConstraints();
-        state_check_checkbox_gc.gridx = 0;
-        state_check_checkbox_gc.gridy = 0;
-        state_check_label = new JLabel("Size Check");
-        state_check_label_gc = new GridBagConstraints();
-        state_check_label_gc.fill = GridBagConstraints.BOTH;
-        state_check_label_gc.gridx = 1;
-        state_check_label_gc.gridy = 0;
-        state_check_label_gc.gridwidth = GridBagConstraints.REMAINDER;
-        state_check_label_gc.weightx = 1;
-        state_check_panel = new JPanel();
-        state_check_panel.add(state_check_checkbox, state_check_checkbox_gc);
-        state_check_panel.add(state_check_label, state_check_label_gc);
+        state_check_checkbox.setText("State Check");
+        state_check_checkbox.setActionCommand("StateCheckToggle");
+        state_check_checkbox.addActionListener(this);
         state_check_gc = new GridBagConstraints();
         state_check_gc.fill = GridBagConstraints.BOTH;
         state_check_gc.gridx = 3;
@@ -480,19 +454,9 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         
         registry_check_checkbox = new JCheckBox();
         registry_check_checkbox.setSelected(true);
-        registry_check_checkbox_gc = new GridBagConstraints();
-        registry_check_checkbox_gc.gridx = 0;
-        registry_check_checkbox_gc.gridy = 0;
-        registry_check_label = new JLabel("Size Check");
-        registry_check_label_gc = new GridBagConstraints();
-        registry_check_label_gc.fill = GridBagConstraints.BOTH;
-        registry_check_label_gc.gridx = 1;
-        registry_check_label_gc.gridy = 0;
-        registry_check_label_gc.gridwidth = GridBagConstraints.REMAINDER;
-        registry_check_label_gc.weightx = 1;
-        registry_check_panel = new JPanel();
-        registry_check_panel.add(registry_check_checkbox, registry_check_checkbox_gc);
-        registry_check_panel.add(registry_check_label, registry_check_label_gc);
+        registry_check_checkbox.setText("Registry Check");
+        registry_check_checkbox.setActionCommand("RegistryCheckToggle");
+        registry_check_checkbox.addActionListener(this);
         registry_check_gc = new GridBagConstraints();
         registry_check_gc.fill = GridBagConstraints.BOTH;
         registry_check_gc.gridx = 4;
@@ -503,6 +467,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         rerun_checks_button = new JButton("Rerun Checks");
         rerun_checks_button.setActionCommand("RerunChecks");
         rerun_checks_button.addActionListener(this);
+        rerun_checks_button.setEnabled(false);
         rerun_checks_gc = new GridBagConstraints();
         rerun_checks_gc.fill = GridBagConstraints.BOTH;
         rerun_checks_gc.gridx = 5;
@@ -513,6 +478,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         run_deletion_button = new JButton("Run Deletion");
         run_deletion_button.setActionCommand("RunDeletion");
         run_deletion_button.addActionListener(this);
+        run_deletion_button.setEnabled(false);
         run_deletion_gc = new GridBagConstraints();
         run_deletion_gc.fill = GridBagConstraints.BOTH;
         run_deletion_gc.gridx = 6;
@@ -542,9 +508,9 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         
         getContentPane().add(computer_name_text_field, computer_name_gc);
         getContentPane().add(set_computer_button, set_computer_gc);
-        getContentPane().add(size_check_panel, size_check_gc);
-        getContentPane().add(state_check_panel, state_check_gc);
-        getContentPane().add(registry_check_panel, registry_check_gc);
+        getContentPane().add(size_check_checkbox, size_check_gc);
+        getContentPane().add(state_check_checkbox, state_check_gc);
+        getContentPane().add(registry_check_checkbox, registry_check_gc);
         getContentPane().add(rerun_checks_button, rerun_checks_gc);
         getContentPane().add(run_deletion_button, run_deletion_gc);
         getContentPane().add(write_log_button, write_log_gc);
@@ -671,7 +637,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     
     public List<String> ProcessDeletion() throws NotInitialisedException {
         LogMessage("Attempting to run deletion on users list", LOG_TYPE.INFO, true);
-        if(folders != null && !folders.isEmpty() && sid_guid_check_complete) {
+        if(folders != null && !folders.isEmpty() && state_check_complete && registry_check_complete) {
             ArrayList<UserAccount> new_folders = new ArrayList<UserAccount>();
             ArrayList<String> deleted_folders = new ArrayList<String>();
             deleted_folders.add("User" + '\t' + "Folder Deleted?" + '\t' + "Registry SID Deleted?" + '\t' + "Registry GUID Deleted?");
@@ -801,21 +767,72 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
             RerunChecksButton();
         } else if ("RunDeletion" == e.getActionCommand()) {
             RunDeletionButton();
+        } else if ("WriteLog" == e.getActionCommand()) {
+            WriteLogButton();
+        } else if ("SizeCheckToggle" == e.getActionCommand()) {
+            SizeCheckCheckbox();
+        } else if ("StateCheckToggle" == e.getActionCommand()) {
+            StateCheckCheckbox();
+        } else if ("RegistryCheckToggle" == e.getActionCommand()) {
+            RegistryCheckCheckbox();
         } else if ("Exit" == e.getActionCommand()) {
             ExitButton();
         }
     }
     
     public void SetComputerButton() {
-        
+        computer_name_text_field.setEnabled(false);
+        set_computer_button.setEnabled(false);
+        size_check_checkbox.setEnabled(false);
+        state_check_checkbox.setEnabled(false);
+        registry_check_checkbox.setEnabled(false);
+        rerun_checks_button.setEnabled(false);
+        run_deletion_button.setEnabled(false);
+        write_log_button.setEnabled(false);
+        results_table.setEnabled(false);
+        (set_computer_thread = new SetComputerThread()).execute();
     }
     
     public void RerunChecksButton() {
-        
+        computer_name_text_field.setEnabled(false);
+        set_computer_button.setEnabled(false);
+        size_check_checkbox.setEnabled(false);
+        state_check_checkbox.setEnabled(false);
+        registry_check_checkbox.setEnabled(false);
+        rerun_checks_button.setEnabled(false);
+        run_deletion_button.setEnabled(false);
+        write_log_button.setEnabled(false);
+        results_table.setEnabled(false);
+        (rerun_checks_thread = new RerunChecksThread()).execute();
     }
     
     public void RunDeletionButton() {
         
+    }
+    
+    public void WriteLogButton() {
+        computer_name_text_field.setEnabled(false);
+        set_computer_button.setEnabled(false);
+        size_check_checkbox.setEnabled(false);
+        state_check_checkbox.setEnabled(false);
+        registry_check_checkbox.setEnabled(false);
+        rerun_checks_button.setEnabled(false);
+        run_deletion_button.setEnabled(false);
+        write_log_button.setEnabled(false);
+        results_table.setEnabled(false);
+        (write_log_thread = new WriteLogThread()).execute();
+    }
+    
+    public void SizeCheckCheckbox() {
+        size_check = size_check_checkbox.isSelected();
+    }
+    
+    public void StateCheckCheckbox() {
+        state_check = state_check_checkbox.isSelected();
+    }
+    
+    public void RegistryCheckCheckbox() {
+        reg_check = registry_check_checkbox.isSelected();
     }
     
     public void ExitButton() {
@@ -1054,7 +1071,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                         }
                         count++;
                     }
-                    sid_guid_check_complete = true;
+                    registry_check_complete = true;
                     LogMessage("Successfully compiled SID and GUID data from registry backups", LOG_TYPE.INFO, true);
                 } else {
                     String message = "File " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg or " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg is either empty or corrupt";
@@ -1101,6 +1118,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                     }
                     powershell_process_output_stream.close();
                     power_shell_process.destroy();
+                    setTitle("Profile Deleter - " + computer);
                     LogMessage("Successfully built users directory " + users_directory, LOG_TYPE.INFO, true);
             } catch(IOException e) {
                 LogMessage("Failed to build users directory " + users_directory, LOG_TYPE.ERROR, true);
@@ -1133,6 +1151,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                     throw e;
                 }
             }
+            state_check_complete = true;
             LogMessage("Finished checking editable state of directory list", LOG_TYPE.INFO, true);
         } else {
             LogMessage("Directory list is empty, aborting editable state check", LOG_TYPE.WARNING, true);
@@ -1142,11 +1161,13 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     public void CheckSize() {
         LogMessage("Calcuting size of directory list", LOG_TYPE.INFO, true);
         if(folders.size() > 0 && users_directory.compareTo("") != 0) {
+            Double total_size = 0.0;
             for(int i=0;i<folders.size();i++) {
                 String folder = folders.get(i).name;
                 String folder_size = "";
                 try {
                     folder_size = FolderSize(folder);
+                    total_size += Double.parseDouble(folder_size);
                     LogMessage("Calculated size " + folder_size + " for folder " + folder, LOG_TYPE.INFO, true);
                 } catch(NonNumericException | IOException e) {
                     folder_size = "Could not calculate size";
@@ -1155,6 +1176,8 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                 }
                 folders.get(i).size = folder_size;
             }
+            //Double size_in_megabytes = total_size / (1024.0 * 1024.0);
+            setTitle("Profile Deleter - " + computer + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
             LogMessage("Finished calculating size of directory list", LOG_TYPE.INFO, true);
         } else {
             LogMessage("Directory list is empty, aborting size calculation", LOG_TYPE.WARNING, true);
@@ -1524,12 +1547,12 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
 
     public String GenerateDateString(String prefix) {
-        LogMessage("Generating date/time String with prefix " + prefix, LOG_TYPE.INFO, true);
+        LogMessage("Generating date/time String with prefix " + prefix, LOG_TYPE.INFO, true, false);
         TimeZone timezone = TimeZone.getTimeZone("UTC");
         Calendar calendar = Calendar.getInstance();
         SimpleDateFormat filename_utc = new SimpleDateFormat("yyMMddHHmmss");
         String current_date = filename_utc.format(calendar.getTime());
-        LogMessage("Generated date/time String " + prefix + current_date, LOG_TYPE.INFO, true);
+        LogMessage("Generated date/time String " + prefix + current_date, LOG_TYPE.INFO, true, false);
         return prefix + current_date;
     }
 
@@ -1665,5 +1688,135 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         Object data = model.getValueAt(row, column);
         
         folders.get(row).delete = Boolean.parseBoolean(data.toString());
+    }
+    
+    private class SetComputerThread extends SwingWorker<Object, Object> {
+        boolean ping_success = false;
+                
+        @Override
+        protected Object doInBackground() throws Exception {
+            ping_success = pingPC(computer_name_text_field.getText());
+            if(ping_success) {
+                state_check_complete = false;
+                registry_check_complete = false;
+                SetComputer(computer_name_text_field.getText());
+                BuildDirectory();
+                if(size_check) {
+                    CheckSize();
+                }
+                if(state_check) {
+                    CheckState();
+                }
+                if(reg_check) {
+                    GenerateSessionID();
+                    try {
+                        CreateSessionFolders();
+                        try {
+                            BackupAndCopyRegistry();
+                            try {
+                                FindSIDAndGUID();
+                            } catch(IOException | NotInitialisedException e) {
+                            }
+                        } catch(IOException | CannotEditException | NotInitialisedException | InterruptedException e) {
+                        }
+                    } catch(IOException | CannotEditException | NotInitialisedException e) {
+                    }
+                }
+                UpdateTableData();
+            } else {
+                LogMessage("Unable to ping computer, computer not set", LOG_TYPE.WARNING, true);
+            }
+            return new Object();
+        }
+        
+        @Override
+        public void done() {
+            if(ping_success) {
+                rerun_checks_button.setEnabled(true);
+            }
+            if(state_check_complete && registry_check_complete) {
+                run_deletion_button.setEnabled(true);
+            }
+            computer_name_text_field.setEnabled(true);
+            set_computer_button.setEnabled(true);
+            size_check_checkbox.setEnabled(true);
+            state_check_checkbox.setEnabled(true);
+            registry_check_checkbox.setEnabled(true);
+            write_log_button.setEnabled(true);
+            results_table.setEnabled(true);
+        }
+    }
+    
+    private class RerunChecksThread extends SwingWorker<Object, Object> {
+        @Override
+        protected Object doInBackground() throws Exception {
+            if(computer != null && !computer.isEmpty()) {
+                if(size_check) {
+                    CheckSize();
+                }
+                if(state_check) {
+                    CheckState();
+                }
+                if(reg_check) {
+                    GenerateSessionID();
+                    try {
+                        CreateSessionFolders();
+                        try {
+                            BackupAndCopyRegistry();
+                            try {
+                                FindSIDAndGUID();
+                            } catch(IOException | NotInitialisedException e) {
+                            }
+                        } catch(IOException | CannotEditException | NotInitialisedException | InterruptedException e) {
+                        }
+                    } catch(IOException | CannotEditException | NotInitialisedException e) {
+                    }
+                }
+                UpdateTableData();
+            }
+            return new Object();
+        }
+        
+        @Override
+        public void done() {
+            if(state_check_complete && registry_check_complete) {
+                run_deletion_button.setEnabled(true);
+            }
+            rerun_checks_button.setEnabled(true);
+            computer_name_text_field.setEnabled(true);
+            set_computer_button.setEnabled(true);
+            size_check_checkbox.setEnabled(true);
+            state_check_checkbox.setEnabled(true);
+            registry_check_checkbox.setEnabled(true);
+            write_log_button.setEnabled(true);
+            results_table.setEnabled(true);
+        }
+    }
+    
+    private class WriteLogThread extends SwingWorker<Object, Object> {
+        @Override
+        protected Object doInBackground() throws Exception {
+            try {
+                LogMessage("Successfully wrote log to file " + WriteLog(), LOG_TYPE.INFO, true);
+            } catch (IOException | NotInitialisedException e) {
+                LogMessage("Failed to write log to file. Error is " + e.getMessage(), LOG_TYPE.ERROR, true);
+            }
+            return new Object();
+        }
+        
+        @Override
+        public void done() {
+            if(state_check_complete && registry_check_complete) {
+                run_deletion_button.setEnabled(true);
+            }
+            rerun_checks_button.setEnabled(true);
+            computer_name_text_field.setEnabled(true);
+            set_computer_button.setEnabled(true);
+            size_check_checkbox.setEnabled(true);
+            state_check_checkbox.setEnabled(true);
+            registry_check_checkbox.setEnabled(true);
+            write_log_button.setEnabled(true);
+            results_table.setEnabled(true);
+        }
     }
 }
