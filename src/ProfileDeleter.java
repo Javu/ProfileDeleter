@@ -46,12 +46,12 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     private String users_directory;
     private String remote_data_directory;
     private String local_data_directory;
-    private List<UserAccount> folders;
+    private List<UserData> user_list;
     private List<String> log_list;
     private String session_id;
     private boolean size_check;
     private boolean state_check;
-    private boolean reg_check;
+    private boolean registry_check;
     private boolean size_check_complete;
     private boolean state_check_complete;
     private boolean registry_check_complete;
@@ -82,7 +82,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     private GridBagConstraints state_check_gc;
     private JCheckBox registry_check_checkbox;
     private GridBagConstraints registry_check_gc;
-    
+
     private SetComputerThread set_computer_thread;
     private RerunChecksThread rerun_checks_thread;
     private RunDeletionThread run_deletion_thread;
@@ -119,12 +119,12 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         users_directory = "";
         remote_data_directory = "";
         local_data_directory = "";
-        folders = new ArrayList<>();
+        user_list = new ArrayList<>();
         log_list = new ArrayList<>();
         session_id = "";
         size_check = false;
         state_check = true;
-        reg_check = true;
+        registry_check = true;
         size_check_complete = false;
         state_check_complete = false;
         registry_check_complete = false;
@@ -175,8 +175,6 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
             }
         };
         UpdateTableData();
-        //results_table.setAutoCreateRowSorter(true);
-        //results_table.getModel().addTableModelListener(this);
         results_scroll_pane = new JScrollPane(results_table);
         results_scroll_pane.setBorder(new LineBorder(Color.BLACK, 2));
         results_gc = new GridBagConstraints();
@@ -188,9 +186,6 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         
         system_console_text_area = new JTextArea("System Console");
         system_console_text_area.setEditable(false);
-        //DefaultCaret caret = (DefaultCaret)system_console_text_area.getCaret();
-        //caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
-        //system_console_text_area.setBorder(new LineBorder(Color.WHITE, 1));
         system_console_text_area.setBackground(Color.BLACK);
         system_console_text_area.setForeground(Color.WHITE);
         system_console_text_area.setSelectedTextColor(Color.YELLOW);
@@ -329,127 +324,176 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         setVisible(true);
     }
 
+    /**
+     * Sets the computer and users directory attributes.
+     * 
+     * @param computer the hostname or IP address of the target computer
+     */
     public void SetComputer(String computer) {
-        LogMessage("Remote computer set to " + computer, LOG_TYPE.INFO, true);
         this.computer = computer;
         this.users_directory = "\\\\" + computer + "\\c$\\users\\";
+        LogMessage("Remote computer set to " + computer, LOG_TYPE.INFO, true);
     }
 
+    /**
+     * Sets the value of the users directory attribute.
+     * 
+     * @return the filepath to the target computers users directory
+     */
+    public void SetUsersDirectory(String users_directory) {
+        this.users_directory = users_directory;
+        LogMessage("Users directory set to " + users_directory, LOG_TYPE.INFO, true);
+    }
+
+    /**
+     * Sets the value of the remote data directory attritube
+     * 
+     * @return the filepath to the directory on the target computer for storing ProfileDeleter data
+     */
+    public void SetRemoteDataDirectory(String remote_data_directory) {
+        this.remote_data_directory = remote_data_directory;
+        LogMessage("Remote data directory set to " + remote_data_directory, LOG_TYPE.INFO, true);
+    }
+
+    /**
+     * Sets the value of the local data directory attritube
+     * 
+     * @return the filepath to the directory on the local computer for storing ProfileDeleter data
+     */
+    public void SetLocalDataDirectory(String local_data_directory) {
+        this.local_data_directory = local_data_directory;
+        LogMessage("Local data directory set to " + local_data_directory, LOG_TYPE.INFO, true);
+    }
+
+    /**
+     * Sets the size check attritube.
+     * Determines whether a size check is done when checks are run.
+     * 
+     * @param size_check whether to run a size check or not
+     */
     public void SetSizeCheck(boolean size_check) {
-        LogMessage("size_check set to " + size_check, LOG_TYPE.INFO, true);
         this.size_check = size_check;
+        LogMessage("Size check set to " + size_check, LOG_TYPE.INFO, true);
     }
 
+    /**
+     * Sets the state check attritube.
+     * Determines whether a state check is done when checks are run.
+     * 
+     * @param state_check whether to run a state check or not
+     */
     public void SetStateCheck(boolean state_check) {
-        LogMessage("state_check set to " + state_check, LOG_TYPE.INFO, true);
         this.state_check = state_check;
+        LogMessage("State check set to " + state_check, LOG_TYPE.INFO, true);
     }
 
-    public void SetRegCheck(boolean reg_check) {
-        LogMessage("reg_check set to " + reg_check, LOG_TYPE.INFO, true);
-        this.reg_check = reg_check;
-    }
-    
-    public void SetUserDelete(String name, boolean delete) throws NotInitialisedException, DoesNotExistException, CannotEditException {
-        LogMessage("Changing value of delete to " + delete + " for user " + name, LOG_TYPE.INFO, true);
-        if(folders != null && !folders.isEmpty()) {
-            if(name.compareTo("Public") != 0) {
-                boolean found_user = false;
-                for(UserAccount user : folders) {
-                    if(name.compareTo(user.name) == 0) {
-                        if(user.state.compareTo("Editable") == 0) {
-                            user.delete = delete;
-                            found_user = true;
-                            LogMessage("Set delete to " + delete + " for user " + name, LOG_TYPE.INFO, true);
-                        } else {
-                            String message = "User " + name + " has not been determined as editable, please run state check or check users state";
-                            LogMessage(message, LOG_TYPE.WARNING, true);
-                            throw new CannotEditException(message);
-                        }
-                    }
-                }
-                if(!found_user) {
-                    String message = "User " + name + " does not exist";
-                    LogMessage(message, LOG_TYPE.WARNING, true);
-                    throw new DoesNotExistException(message);
-                }
-            } else {
-                String message = "You cannot delete the Public account";
-                LogMessage(message, LOG_TYPE.WARNING, true);
-                throw new CannotEditException(message);
-            }
-        } else {
-            String message = "User list has not been initialised";
-            LogMessage(message, LOG_TYPE.WARNING, true);
-            throw new NotInitialisedException(message);
-        }
+    /**
+     * Sets the registry check attritube.
+     * Determines whether a registry check is done when checks are run.
+     * 
+     * @param registry_check whether to run a registry check or not
+     */
+    public void SetRegistryCheck(boolean registry_check) {
+        this.registry_check = registry_check;
+        LogMessage("Registry check set to " + registry_check, LOG_TYPE.INFO, true);
     }
 
+    /**
+     * Sets the user list attribute.
+     * 
+     * @param user_list list of UserData that contain details for the users on the target computer
+     */
+    public void SetUserList(List<UserData> user_list) {
+        this.user_list = user_list;
+    }
+
+    /**
+     * Gets the value of the computer attritube.
+     * 
+     * @return the target computer hostname or IP address
+     */
     public String GetComputer() {
         return computer;
     }
 
+    /**
+     * Gets the value of the users directory attribute.
+     * 
+     * @return the filepath to the target computers users directory
+     */
     public String GetUsersDirectory() {
         return users_directory;
     }
 
+    /**
+     * Gets the value of the remote data directory attritube
+     * 
+     * @return the filepath to the directory on the target computer for storing ProfileDeleter data
+     */
     public String GetRemoteDataDirectory() {
         return remote_data_directory;
     }
 
+    /**
+     * Gets the value of the local data directory attritube
+     * 
+     * @return the filepath to the directory on the local computer for storing ProfileDeleter data
+     */
     public String GetLocalDataDirectory() {
         return local_data_directory;
     }
 
+    /**
+     * Gets the size check attritube.
+     * 
+     * @return whether to run a size check or not
+     */
     public boolean GetSizeCheck() {
         return size_check;
     }
 
+    /**
+     * Gets the state check attritube.
+     * 
+     * @return whether to run a state check or not
+     */
     public boolean GetStateCheck() {
         return state_check;
     }
 
-    public boolean GetRegCheck() {
-        return reg_check;
+    /**
+     * Gets the registry check attritube.
+     * 
+     * @return whether to run a registry check or not
+     */
+    public boolean GetRegistryCheck() {
+        return registry_check;
     }
 
-    public boolean GetUserDelete(String name) throws NotInitialisedException, DoesNotExistException {
-        LogMessage("Getting value of delete for user " + name, LOG_TYPE.INFO, true);
-        if(folders != null && !folders.isEmpty()) {
-            boolean found_user = false;
-            for(UserAccount user : folders) {
-                if(name.compareTo(user.name) == 0) {
-                    return user.delete;
-                }
-            }
-            if(!found_user) {
-                String message = "User " + name + " does not exist";
-                LogMessage(message, LOG_TYPE.WARNING, true);
-                throw new DoesNotExistException(message);
-            }
-        } else {
-            String message = "User list has not been initialised";
-            LogMessage(message, LOG_TYPE.WARNING, true);
-            throw new NotInitialisedException(message);
-        }
-        return false;
+    /**
+     * Sets the user list attribute.
+     * 
+     * @return list of UserData that contain details for the users on the target computer
+     */
+    public List<UserData> GetUserList() {
+        return user_list;
     }
 
     public Object[][] ConvertFoldersTo2DObjectArray() {
-        Object[][] object_array = new Object[folders.size()][];
-        for(int i=0;i<folders.size();i++) {
-            object_array[i] = folders.get(i).ToObjectArray();
+        Object[][] object_array = new Object[user_list.size()][];
+        for(int i=0;i<user_list.size();i++) {
+            object_array[i] = user_list.get(i).ToObjectArray();
         }
         return object_array;
     }
     
     public List<String> ProcessDeletion() throws NotInitialisedException {
         LogMessage("Attempting to run deletion on users list", LOG_TYPE.INFO, true);
-        if(folders != null && !folders.isEmpty() && state_check_complete && registry_check_complete) {
-            ArrayList<UserAccount> new_folders = new ArrayList<UserAccount>();
+        if(user_list != null && !user_list.isEmpty() && state_check_complete && registry_check_complete) {
+            ArrayList<UserData> new_folders = new ArrayList<UserData>();
             ArrayList<String> deleted_folders = new ArrayList<String>();
             deleted_folders.add("User" + '\t' + "Folder Deleted?" + '\t' + "Registry SID Deleted?" + '\t' + "Registry GUID Deleted?");
-            for(UserAccount user : folders) {
+            for(UserData user : user_list) {
                 if(user.delete) {
                     LogMessage("User " + user.name + " is flagged for deletion", LOG_TYPE.INFO, true);
                     String deleted_user = user.name + '\t';
@@ -495,7 +539,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                     new_folders.add(user);
                 }
             }
-            folders = new_folders;
+            user_list = new_folders;
             LogMessage("Successfully completed deletions", LOG_TYPE.INFO, true);
             return deleted_folders;
         } else {
@@ -508,7 +552,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     public void UpdateTableData() {
         results_table.getModel().removeTableModelListener(this);
         results_table.setModel(new AbstractTableModel () {
-            private String[] columnNames = UserAccount.HeadingsToStringArray();
+            private String[] columnNames = UserData.HeadingsToStringArray();
             private Object[][] rowData = ConvertFoldersTo2DObjectArray();
             
             public String getColumnName(int col) {
@@ -650,7 +694,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
     
     public void RegistryCheckCheckbox() {
-        reg_check = registry_check_checkbox.isSelected();
+        registry_check = registry_check_checkbox.isSelected();
     }
     
     public void ExitButton() {
@@ -674,8 +718,8 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                 } catch(IOException | CannotEditException e) {
                     if(count > 29) {
                         /*
-                        LogMessage("Back up of registry key has failed too many times. You may not have permission to backup the registry, you may not have permissions to create folders and files in \\\\" + computer + "\\C$\\temp, or the drive may not have a couple of MB free to create the registry backups needed. Check permissions or delete some files from the remote PC. Awaiting prompt from user", LOG_TYPE.WARNING, true);
-                        System.out.println("Failed to backup registry file \"HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\ProfileList\". You may not have permission to backup the registry, you may not have permissions to create folders and files in \\\\" + computer + "\\C$\\temp, or the drive may not have a couple of MB free to create the registry backups needed.");
+                        LogMessage("Back up of registry key has failed too many times. You may not have permission to backup the registry, you may not have permissions to create user_list and files in \\\\" + computer + "\\C$\\temp, or the drive may not have a couple of MB free to create the registry backups needed. Check permissions or delete some files from the remote PC. Awaiting prompt from user", LOG_TYPE.WARNING, true);
+                        System.out.println("Failed to backup registry file \"HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\ProfileList\". You may not have permission to backup the registry, you may not have permissions to create user_list and files in \\\\" + computer + "\\C$\\temp, or the drive may not have a couple of MB free to create the registry backups needed.");
                         System.out.println("1. Retry (it is recommended you manually delete a few MB of files before retrying)");
                         System.out.println("2. Delete all files in \\\\" + computer + "\\C$\\temp except BGInfo.bmp and retry");
                         System.out.println("3. Stop running registry backup");
@@ -714,8 +758,8 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                     run = false;
                 } catch(IOException | CannotEditException e) {
                     if(count > 29) {/*
-                        LogMessage("Back up of registry key has failed too many times. You may not have permission to backup the registry, you may not have permissions to create folders and files in \\\\" + computer + "\\C$\\temp, or the drive may not have a couple of MB free to create the registry backups needed. Check permissions or delete some files from the remote PC. Awaiting prompt from user", LOG_TYPE.WARNING, true);
-                        System.out.println("Failed to backup registry file \"HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\ProfileGuid\". You may not have permission to backup the registry, you may not have permissions to create folders and files in \\\\" + computer + "\\C$\\temp, or the drive may not have a couple of MB free to create the registry backups needed.");
+                        LogMessage("Back up of registry key has failed too many times. You may not have permission to backup the registry, you may not have permissions to create user_list and files in \\\\" + computer + "\\C$\\temp, or the drive may not have a couple of MB free to create the registry backups needed. Check permissions or delete some files from the remote PC. Awaiting prompt from user", LOG_TYPE.WARNING, true);
+                        System.out.println("Failed to backup registry file \"HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\ProfileGuid\". You may not have permission to backup the registry, you may not have permissions to create user_list and files in \\\\" + computer + "\\C$\\temp, or the drive may not have a couple of MB free to create the registry backups needed.");
                         System.out.println("1. Retry (it is recommended you manually delete a few MB of files before retrying)");
                         System.out.println("2. Delete all files in \\\\" + computer + "\\C$\\temp except BGInfo.bmp and retry");
                         System.out.println("3. Stop running registry backup");
@@ -814,7 +858,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                             if(!profile_path.isEmpty()) {
                                 LogMessage("Processing details for found profile " + profile_path, LOG_TYPE.INFO, true);
                                 boolean found_user = false;
-                                for(UserAccount user : folders) {
+                                for(UserData user : user_list) {
                                     if(user.name.compareTo(profile_path) == 0) {
                                         found_user = true;
                                         LogMessage("Found matching user account", LOG_TYPE.INFO, true);
@@ -834,8 +878,8 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                                                     sid = sid.replaceAll("\"", "");
                                                     if(sid.compareTo(current_sid) == 0) {
                                                         LogMessage("New SID details match SID details for GUID, replacing user details with new details. SID set to " + current_sid + " and GUID to " + profile_guid, LOG_TYPE.INFO, true);
-                                                        folders.get(folders.indexOf(user)).sid = current_sid;
-                                                        folders.get(folders.indexOf(user)).guid = profile_guid;
+                                                        user_list.get(user_list.indexOf(user)).sid = current_sid;
+                                                        user_list.get(user_list.indexOf(user)).guid = profile_guid;
                                                         break;
                                                     }
                                                 }
@@ -843,8 +887,8 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                                             LogMessage("No match found, discarding new details found", LOG_TYPE.INFO, true);
                                         } else {
                                             LogMessage("Set SID for user " + profile_path + " to " + current_sid + " and GUID to " + profile_guid, LOG_TYPE.INFO, true);
-                                            folders.get(folders.indexOf(user)).sid = current_sid;
-                                            folders.get(folders.indexOf(user)).guid = profile_guid;
+                                            user_list.get(user_list.indexOf(user)).sid = current_sid;
+                                            user_list.get(user_list.indexOf(user)).guid = profile_guid;
                                         }
                                         break;
                                     }
@@ -910,7 +954,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         LogMessage("Attempting to build users directory " + users_directory, LOG_TYPE.INFO, true);
         if(users_directory.compareTo("") != 0) {
             try{
-                    folders = new ArrayList<>();
+                    user_list = new ArrayList<>();
                     String command = "Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process | powershell.exe -File \".\\src\\GetDirectoryList.ps1\" - directory " + users_directory;
                     ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-Command", command);
                     builder.redirectErrorStream(true);
@@ -922,7 +966,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                             if(!line.isEmpty()) {
                                     LogMessage("Discovered folder details " + line, LOG_TYPE.INFO, true);
                                     String[] line_split = line.split("\\t");
-                                    UserAccount folder = new UserAccount();
+                                    UserData folder = new UserData();
                                     if(line_split[0].compareTo("Public") == 0) {
                                         folder.delete = false;
                                     } else {
@@ -934,7 +978,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                                     folder.state = "";
                                     folder.sid = "";
                                     folder.guid = "";
-                                    folders.add(folder);
+                                    user_list.add(folder);
                             }
                     }
                     powershell_process_output_stream.close();
@@ -953,19 +997,19 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
 
     public void CheckState() throws IOException {
         LogMessage("Checking editable state of directory list", LOG_TYPE.INFO, true);
-        if(folders.size() > 0 && users_directory.compareTo("") != 0) {
-            for(int i=0;i<folders.size();i++) {
-                String folder = folders.get(i).name;
+        if(user_list.size() > 0 && users_directory.compareTo("") != 0) {
+            for(int i=0;i<user_list.size();i++) {
+                String folder = user_list.get(i).name;
                 LogMessage("Checking editable state of folder " + folder, LOG_TYPE.INFO, true);
                 try {
                     RenameDirectory(computer, "C:\\users\\", folder, folder);
-                    folders.get(i).state = "Editable";
-                    folders.get(i).delete = true;
+                    user_list.get(i).state = "Editable";
+                    user_list.get(i).delete = true;
                 } catch(CannotEditException e) {
                     String message = "Uneditable. User may be logged in or PC may need to be restarted";
                     LogMessage(message, LOG_TYPE.WARNING, true);
-                    folders.get(i).state = message;
-                    folders.get(i).delete = false;
+                    user_list.get(i).state = message;
+                    user_list.get(i).delete = false;
                 } catch(IOException e) {
                     LogMessage("Editable state check has failed", LOG_TYPE.ERROR, true);
                     LogMessage(e.getMessage(), LOG_TYPE.ERROR, true);
@@ -981,10 +1025,10 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
 
     public void CheckSize() {
         LogMessage("Calcuting size of directory list", LOG_TYPE.INFO, true);
-        if(folders.size() > 0 && users_directory.compareTo("") != 0) {
+        if(user_list.size() > 0 && users_directory.compareTo("") != 0) {
             Double total_size = 0.0;
-            for(int i=0;i<folders.size();i++) {
-                String folder = folders.get(i).name;
+            for(int i=0;i<user_list.size();i++) {
+                String folder = user_list.get(i).name;
                 String folder_size = "";
                 try {
                     folder_size = FolderSize(folder);
@@ -995,7 +1039,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                     LogMessage(folder_size + " for folder " + folder, LOG_TYPE.WARNING, true);
                     LogMessage(e.getMessage(), LOG_TYPE.ERROR, true);
                 }
-                folders.get(i).size = folder_size;
+                user_list.get(i).size = folder_size;
             }
             //Double size_in_megabytes = total_size / (1024.0 * 1024.0);
             setTitle("Profile Deleter - " + computer + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
@@ -1012,7 +1056,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
 
     public void CreateSessionFolders() throws NotInitialisedException, IOException, CannotEditException {
-        LogMessage("Attempting to create session folders", LOG_TYPE.INFO, true);
+        LogMessage("Attempting to create session user_list", LOG_TYPE.INFO, true);
         if(session_id.compareTo("") != 0 && computer.compareTo("") != 0) {
             try {
                 MakeDirectory("\\\\" + computer + "\\c$\\temp\\Profile_Deleter");
@@ -1035,7 +1079,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                 LogMessage(message, LOG_TYPE.ERROR, true);
                 throw new CannotEditException(message);
             }
-            LogMessage("Successfully created session folders", LOG_TYPE.INFO, true);
+            LogMessage("Successfully created session user_list", LOG_TYPE.INFO, true);
         } else {
             String message = "";
             if(session_id.compareTo("") == 0) {
@@ -1342,20 +1386,20 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         LogMessage("Compiling directory list into readable String", LOG_TYPE.INFO, true, false);
         String output = "";
         Double total_size = 0.0;
-        output += UserAccount.HeadingsToString();
-        if(folders.size() > 0) {
+        output += UserData.HeadingsToString();
+        if(user_list.size() > 0) {
             output += '\n';
         }
-        for(int i = 0;i < folders.size();i++) {
-            output += folders.get(i).ToString();
-            if(Pattern.matches("[-+]?[0-9]*\\.?[0-9]+", folders.get(i).size)) {
-                total_size += Double.parseDouble(folders.get(i).size);
+        for(int i = 0;i < user_list.size();i++) {
+            output += user_list.get(i).ToString();
+            if(Pattern.matches("[-+]?[0-9]*\\.?[0-9]+", user_list.get(i).size)) {
+                total_size += Double.parseDouble(user_list.get(i).size);
             }
-            if(i != folders.size()-1) {
+            if(i != user_list.size()-1) {
                 output += '\n';
             }
         }
-        if(folders.size() > 0) {
+        if(user_list.size() > 0) {
             Double size_in_megabytes = total_size / (1024.0 * 1024.0);
             output += '\n' + "Total size:" + '\t' + (size_in_megabytes + " MB"); 
         }
@@ -1509,7 +1553,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         TableModel model = (TableModel)e.getSource();
         Object data = model.getValueAt(row, column);
         
-        folders.get(row).delete = Boolean.parseBoolean(data.toString());
+        user_list.get(row).delete = Boolean.parseBoolean(data.toString());
     }
     
     private class SetComputerThread extends SwingWorker<Object, Object> {
@@ -1530,7 +1574,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                 if(state_check) {
                     CheckState();
                 }
-                if(reg_check) {
+                if(registry_check) {
                     GenerateSessionID();
                     try {
                         CreateSessionFolders();
@@ -1581,7 +1625,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                 if(state_check) {
                     CheckState();
                 }
-                if(reg_check) {
+                if(registry_check) {
                     GenerateSessionID();
                     try {
                         CreateSessionFolders();
@@ -1661,7 +1705,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                     UpdateTableData();
                     if(size_check_complete) {
                         double total_size = 0.0;
-                        for(UserAccount user : folders) {
+                        for(UserData user : user_list) {
                             total_size += Double.parseDouble(user.size);
                         }
                         setTitle("Profile Deleter - " + computer + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
