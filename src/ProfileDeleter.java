@@ -346,7 +346,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
 
     /**
-     * Sets the value of the remote data directory attritube
+     * Sets the value of the remote data directory attribute
      * 
      * @return the filepath to the directory on the target computer for storing ProfileDeleter data
      */
@@ -356,7 +356,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
 
     /**
-     * Sets the value of the local data directory attritube
+     * Sets the value of the local data directory attribute
      * 
      * @return the filepath to the directory on the local computer for storing ProfileDeleter data
      */
@@ -366,7 +366,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
 
     /**
-     * Sets the size check attritube.
+     * Sets the size check attribute.
      * Determines whether a size check is done when checks are run.
      * 
      * @param size_check whether to run a size check or not
@@ -377,7 +377,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
 
     /**
-     * Sets the state check attritube.
+     * Sets the state check attribute.
      * Determines whether a state check is done when checks are run.
      * 
      * @param state_check whether to run a state check or not
@@ -388,7 +388,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
 
     /**
-     * Sets the registry check attritube.
+     * Sets the registry check attribute.
      * Determines whether a registry check is done when checks are run.
      * 
      * @param registry_check whether to run a registry check or not
@@ -408,7 +408,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
 
     /**
-     * Gets the value of the computer attritube.
+     * Gets the value of the computer attribute.
      * 
      * @return the target computer hostname or IP address
      */
@@ -426,7 +426,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
 
     /**
-     * Gets the value of the remote data directory attritube
+     * Gets the value of the remote data directory attribute
      * 
      * @return the filepath to the directory on the target computer for storing ProfileDeleter data
      */
@@ -435,7 +435,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
 
     /**
-     * Gets the value of the local data directory attritube
+     * Gets the value of the local data directory attribute
      * 
      * @return the filepath to the directory on the local computer for storing ProfileDeleter data
      */
@@ -444,7 +444,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
 
     /**
-     * Gets the size check attritube.
+     * Gets the size check attribute.
      * 
      * @return whether to run a size check or not
      */
@@ -453,7 +453,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
 
     /**
-     * Gets the state check attritube.
+     * Gets the state check attribute.
      * 
      * @return whether to run a state check or not
      */
@@ -462,7 +462,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
 
     /**
-     * Gets the registry check attritube.
+     * Gets the registry check attribute.
      * 
      * @return whether to run a registry check or not
      */
