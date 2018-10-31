@@ -40,8 +40,29 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableModel;
 
+/**
+ * Class with functionality to delete user profile folders from a computer running Windows.
+ * In Windows 7 and up when a user logs into a computer it stores a copy of their profile in the (default) folder C:\Users.
+ * It also adds some data to the registry for the user in the registry keys:
+ * HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList.
+ * HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid.
+ * 
+ * To remove a user account from a computer in Windows, whether to conserve hard drive space or because the users profile is corrupt on the computer you need to:
+ * Delete the users folder from the users directory.
+ * Match the registry key in ProfileList to the user account and delete the key under ProfileList.
+ * Match the registry key in ProfileGuid to the users registry key in ProfileList and delete the matching key under ProfileGuid.
+ * 
+ * Doing this for more than one user at a time can be tedious and time consuming.
+ * This class automates this process.
+ * 
+ * Contains a full Java Swing GUI for greater useability.
+ * 
+ */
 public class ProfileDeleter extends JFrame implements TableModelListener, ActionListener
 {
+    /**
+     * Class attributes.
+     */
     private String computer;
     private String users_directory;
     private String remote_data_directory;
@@ -58,6 +79,9 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     private boolean registry_check_complete;
     public BufferedReader console_in;
     
+    /**
+     * Swing GUI elements.
+     */
     private JScrollPane results_scroll_pane;
     private JTable results_table;
     private GridBagConstraints results_gc;
@@ -84,11 +108,17 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     private JCheckBox registry_check_checkbox;
     private GridBagConstraints registry_check_gc;
 
+    /**
+     * SwingWorker threads for GUI.
+     */
     private setComputerThread set_computer_thread;
     private rerunChecksThread rerun_checks_thread;
     private runDeletionThread run_deletion_thread;
     private writeLogThread write_log_thread;
 
+    /**
+     * Severity level for logged messages.
+     */
     public enum LOG_TYPE {
         INFO(0),
         WARNING(1),
@@ -113,6 +143,9 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         });
     }
 
+    /**
+     * Constructor for ProfileDeleter class.
+     */
     public ProfileDeleter() {
         super("Profile Deleter");
         
@@ -133,10 +166,12 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         registry_check_complete = false;
         console_in = new BufferedReader(new InputStreamReader(System.in));
         
+        // Configurations for the top level JFrame of the GUI.
         setMinimumSize(new Dimension(950, 600));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         getContentPane().setLayout(new GridBagLayout());
         
+        // Column header tooltips in the results table JTable GUI element.
         String[] columnToolTips = {
             "Cannot delete if state is not Editable and cannot delete the Public account",
             null,
@@ -146,6 +181,8 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
             null,
             null
         };
+
+        // Initialisation of results table JTable GUI element.
         results_table = new JTable(new DefaultTableModel()) {
            public String getToolTipText(MouseEvent e) {
                String tip = null;
@@ -187,6 +224,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         results_gc.gridwidth = GridBagConstraints.REMAINDER;
         results_gc.weighty = 1;
         
+        // Initialisation of system console GUI element.
         system_console_text_area = new JTextArea("System Console");
         system_console_text_area.setEditable(false);
         system_console_text_area.setBackground(Color.BLACK);
@@ -214,6 +252,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         system_console_gc.gridwidth = GridBagConstraints.REMAINDER;
         system_console_scroll_pane.setPreferredSize(new Dimension(100,100));
         
+        // Initialisation of computer name input field GUI element.
         computer_name_text_field = new JTextField();
         computer_name_gc = new GridBagConstraints();
         computer_name_gc.fill = GridBagConstraints.BOTH;
@@ -224,6 +263,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         computer_name_gc.weightx = 1;
         computer_name_gc.insets = new Insets(2,2,2,2);
         
+        // Initialisation of set computer button GUI element.
         set_computer_button = new JButton("Set Computer");
         set_computer_button.setActionCommand("setComputer");
         set_computer_button.addActionListener(this);
@@ -234,6 +274,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         set_computer_gc.gridwidth = 1;
         set_computer_gc.gridheight = 1;
         
+        // Initialisation of size check checkbox GUI element.
         size_check_checkbox = new JCheckBox();
         size_check_checkbox.setSelected(false);
         size_check_checkbox.setText("Size Check");
@@ -246,6 +287,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         size_check_gc.gridwidth = 1;
         size_check_gc.gridheight = 1;
         
+        // Initialisation of state check checkbox GUI element.
         state_check_checkbox = new JCheckBox();
         state_check_checkbox.setSelected(true);
         state_check_checkbox.setText("State Check");
@@ -258,6 +300,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         state_check_gc.gridwidth = 1;
         state_check_gc.gridheight = 1;
         
+        // Initialisation of registry check checkbox GUI element.
         registry_check_checkbox = new JCheckBox();
         registry_check_checkbox.setSelected(true);
         registry_check_checkbox.setText("Registry Check");
@@ -270,6 +313,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         registry_check_gc.gridwidth = 1;
         registry_check_gc.gridheight = 1;
         
+        // Initialisation of rerun checks button GUI element.
         rerun_checks_button = new JButton("Rerun Checks");
         rerun_checks_button.setActionCommand("RerunChecks");
         rerun_checks_button.addActionListener(this);
@@ -281,6 +325,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         rerun_checks_gc.gridwidth = 1;
         rerun_checks_gc.gridheight = 1;
         
+        // Initialisation of run deletion button GUI element.
         run_deletion_button = new JButton("Run Deletion");
         run_deletion_button.setActionCommand("RunDeletion");
         run_deletion_button.addActionListener(this);
@@ -292,6 +337,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         run_deletion_gc.gridwidth = 1;
         run_deletion_gc.gridheight = 1;
         
+        // Initialisation of write log button GUI element.
         write_log_button = new JButton("Write Log");
         write_log_button.setActionCommand("writeLog");
         write_log_button.addActionListener(this);
@@ -302,6 +348,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         write_log_gc.gridwidth = 1;
         write_log_gc.gridheight = 1;
         
+        // Initialisation of exit button GUI element.
         exit_button = new JButton("Exit");
         exit_button.setActionCommand("Exit");
         exit_button.addActionListener(this);
@@ -312,6 +359,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         exit_gc.gridwidth = 1;
         exit_gc.gridheight = 1;
         
+        // Add all GUI elements to top level JFrame and display the GUI.
         getContentPane().add(computer_name_text_field, computer_name_gc);
         getContentPane().add(set_computer_button, set_computer_gc);
         getContentPane().add(size_check_checkbox, size_check_gc);
