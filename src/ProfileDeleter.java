@@ -83,10 +83,10 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     private JCheckBox registry_check_checkbox;
     private GridBagConstraints registry_check_gc;
 
-    private SetComputerThread set_computer_thread;
-    private RerunChecksThread rerun_checks_thread;
-    private RunDeletionThread run_deletion_thread;
-    private WriteLogThread write_log_thread;
+    private setComputerThread set_computer_thread;
+    private rerunChecksThread rerun_checks_thread;
+    private runDeletionThread run_deletion_thread;
+    private writeLogThread write_log_thread;
 
     public enum LOG_TYPE {
         INFO(0),
@@ -174,7 +174,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                 };
             }
         };
-        UpdateTableData();
+        updateTableData();
         results_scroll_pane = new JScrollPane(results_table);
         results_scroll_pane.setBorder(new LineBorder(Color.BLACK, 2));
         results_gc = new GridBagConstraints();
@@ -222,7 +222,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         computer_name_gc.insets = new Insets(2,2,2,2);
         
         set_computer_button = new JButton("Set Computer");
-        set_computer_button.setActionCommand("SetComputer");
+        set_computer_button.setActionCommand("setComputer");
         set_computer_button.addActionListener(this);
         set_computer_gc = new GridBagConstraints();
         set_computer_gc.fill = GridBagConstraints.BOTH;
@@ -290,7 +290,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         run_deletion_gc.gridheight = 1;
         
         write_log_button = new JButton("Write Log");
-        write_log_button.setActionCommand("WriteLog");
+        write_log_button.setActionCommand("writeLog");
         write_log_button.addActionListener(this);
         write_log_gc = new GridBagConstraints();
         write_log_gc.fill = GridBagConstraints.BOTH;
@@ -329,10 +329,10 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
      * 
      * @param computer the hostname or IP address of the target computer
      */
-    public void SetComputer(String computer) {
+    public void setComputer(String computer) {
         this.computer = computer;
         this.users_directory = "\\\\" + computer + "\\c$\\users\\";
-        LogMessage("Remote computer set to " + computer, LOG_TYPE.INFO, true);
+        logMessage("Remote computer set to " + computer, LOG_TYPE.INFO, true);
     }
 
     /**
@@ -340,9 +340,9 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
      * 
      * @return the filepath to the target computers users directory
      */
-    public void SetUsersDirectory(String users_directory) {
+    public void setUsersDirectory(String users_directory) {
         this.users_directory = users_directory;
-        LogMessage("Users directory set to " + users_directory, LOG_TYPE.INFO, true);
+        logMessage("Users directory set to " + users_directory, LOG_TYPE.INFO, true);
     }
 
     /**
@@ -350,9 +350,9 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
      * 
      * @return the filepath to the directory on the target computer for storing ProfileDeleter data
      */
-    public void SetRemoteDataDirectory(String remote_data_directory) {
+    public void setRemoteDataDirectory(String remote_data_directory) {
         this.remote_data_directory = remote_data_directory;
-        LogMessage("Remote data directory set to " + remote_data_directory, LOG_TYPE.INFO, true);
+        logMessage("Remote data directory set to " + remote_data_directory, LOG_TYPE.INFO, true);
     }
 
     /**
@@ -360,9 +360,9 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
      * 
      * @return the filepath to the directory on the local computer for storing ProfileDeleter data
      */
-    public void SetLocalDataDirectory(String local_data_directory) {
+    public void setLocalDataDirectory(String local_data_directory) {
         this.local_data_directory = local_data_directory;
-        LogMessage("Local data directory set to " + local_data_directory, LOG_TYPE.INFO, true);
+        logMessage("Local data directory set to " + local_data_directory, LOG_TYPE.INFO, true);
     }
 
     /**
@@ -371,9 +371,9 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
      * 
      * @param size_check whether to run a size check or not
      */
-    public void SetSizeCheck(boolean size_check) {
+    public void setSizeCheck(boolean size_check) {
         this.size_check = size_check;
-        LogMessage("Size check set to " + size_check, LOG_TYPE.INFO, true);
+        logMessage("Size check set to " + size_check, LOG_TYPE.INFO, true);
     }
 
     /**
@@ -382,9 +382,9 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
      * 
      * @param state_check whether to run a state check or not
      */
-    public void SetStateCheck(boolean state_check) {
+    public void setStateCheck(boolean state_check) {
         this.state_check = state_check;
-        LogMessage("State check set to " + state_check, LOG_TYPE.INFO, true);
+        logMessage("State check set to " + state_check, LOG_TYPE.INFO, true);
     }
 
     /**
@@ -393,9 +393,9 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
      * 
      * @param registry_check whether to run a registry check or not
      */
-    public void SetRegistryCheck(boolean registry_check) {
+    public void setRegistryCheck(boolean registry_check) {
         this.registry_check = registry_check;
-        LogMessage("Registry check set to " + registry_check, LOG_TYPE.INFO, true);
+        logMessage("Registry check set to " + registry_check, LOG_TYPE.INFO, true);
     }
 
     /**
@@ -403,7 +403,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
      * 
      * @param user_list list of UserData that contain details for the users on the target computer
      */
-    public void SetUserList(List<UserData> user_list) {
+    public void setUserList(List<UserData> user_list) {
         this.user_list = user_list;
     }
 
@@ -412,7 +412,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
      * 
      * @return the target computer hostname or IP address
      */
-    public String GetComputer() {
+    public String getComputer() {
         return computer;
     }
 
@@ -421,7 +421,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
      * 
      * @return the filepath to the target computers users directory
      */
-    public String GetUsersDirectory() {
+    public String getUsersDirectory() {
         return users_directory;
     }
 
@@ -430,7 +430,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
      * 
      * @return the filepath to the directory on the target computer for storing ProfileDeleter data
      */
-    public String GetRemoteDataDirectory() {
+    public String getRemoteDataDirectory() {
         return remote_data_directory;
     }
 
@@ -439,7 +439,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
      * 
      * @return the filepath to the directory on the local computer for storing ProfileDeleter data
      */
-    public String GetLocalDataDirectory() {
+    public String getLocalDataDirectory() {
         return local_data_directory;
     }
 
@@ -448,7 +448,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
      * 
      * @return whether to run a size check or not
      */
-    public boolean GetSizeCheck() {
+    public boolean getSizeCheck() {
         return size_check;
     }
 
@@ -457,7 +457,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
      * 
      * @return whether to run a state check or not
      */
-    public boolean GetStateCheck() {
+    public boolean getStateCheck() {
         return state_check;
     }
 
@@ -466,7 +466,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
      * 
      * @return whether to run a registry check or not
      */
-    public boolean GetRegistryCheck() {
+    public boolean getRegistryCheck() {
         return registry_check;
     }
 
@@ -475,11 +475,16 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
      * 
      * @return list of UserData that contain details for the users on the target computer
      */
-    public List<UserData> GetUserList() {
+    public List<UserData> getUserList() {
         return user_list;
     }
 
-    public Object[][] ConvertFoldersTo2DObjectArray() {
+    /**
+     * Converts the user list attribute into a 2D Object array so it can be displayed in a JTable.
+     * 
+     * @return 2D Object array of the user list attribute
+     */
+    public Object[][] convertUserDataTo2DObjectArray() {
         Object[][] object_array = new Object[user_list.size()][];
         for(int i=0;i<user_list.size();i++) {
             object_array[i] = user_list.get(i).ToObjectArray();
@@ -487,52 +492,60 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         return object_array;
     }
     
-    public List<String> ProcessDeletion() throws NotInitialisedException {
-        LogMessage("Attempting to run deletion on users list", LOG_TYPE.INFO, true);
+    /**
+     * Processed local Windows account deletion on target computer.
+     * Before this can be done the user list attribute must be set and state check + registry check must be set to true.
+     * These can be done manually or by running 
+     * 
+     * @return deletion report of users flagged for deletion
+     * @throws NotInitialisedException user list has not been initialised or a state and/or registry check has not been run
+     */
+    public List<String> processDeletion() throws NotInitialisedException {
+        logMessage("Attempting to run deletion on users list", LOG_TYPE.INFO, true);
         if(user_list != null && !user_list.isEmpty() && state_check_complete && registry_check_complete) {
             ArrayList<UserData> new_folders = new ArrayList<UserData>();
             ArrayList<String> deleted_folders = new ArrayList<String>();
             deleted_folders.add("User" + '\t' + "Folder Deleted?" + '\t' + "Registry SID Deleted?" + '\t' + "Registry GUID Deleted?");
             for(UserData user : user_list) {
-                if(user.delete) {
-                    LogMessage("User " + user.name + " is flagged for deletion", LOG_TYPE.INFO, true);
-                    String deleted_user = user.name + '\t';
+                if(user.getDelete()) {
+                    logMessage("User " + user.getName() + " is flagged for deletion", LOG_TYPE.INFO, true);
+                    String deleted_user = user.getName() + '\t';
                     try{
-                        DeleteDirectory(users_directory + user.name);
+                        directoryDelete(users_directory + user.getName());
                         deleted_user += "Yes" + '\t';
-                        LogMessage("Successfully deleted user directory for " + user.name, LOG_TYPE.INFO, true);
+                        logMessage("Successfully deleted user directory for " + user.getName(), LOG_TYPE.INFO, true);
                     } catch(IOException | CannotEditException e) {
-                        String message = "Failed to delete user directory " + user.name + ". Error is " + e.getMessage();
+                        String message = "Failed to delete user directory " + user.getName() + ". Error is " + e.getMessage();
                         deleted_user += message + '\t';
-                        LogMessage(message, LOG_TYPE.ERROR, true);
+                        logMessage(message, LOG_TYPE.ERROR, true);
                     }
                     try{
-                        if(user.sid.compareTo("") != 0) {
-                            DeleteRegistry(computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\" + user.sid);
-                            deleted_user += "Yes " + user.sid + '\t';
-                            LogMessage("Successfully deleted SID " + user.sid + " for user " + user.name, LOG_TYPE.INFO, true);
+                        if(user.getSid().compareTo("") != 0) {
+                            registryDelete(computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\" + user.getSid());
+                            deleted_user += "Yes " + user.getSid() + '\t';
+                            logMessage("Successfully deleted SID " + user.getSid() + " for user " + user.getName(), LOG_TYPE.INFO, true);
                         } else {
                             deleted_user += "SID is blank" + '\t';
-                            LogMessage("SID for user " + user.name + " is blank", LOG_TYPE.WARNING, true);
+                            logMessage("SID for user " + user.getName() + " is blank", LOG_TYPE.WARNING, true);
                         }
                     } catch(IOException | InterruptedException e) {
-                        String message = "Failed to delete user SID " + user.sid + " from registry. Error is " + e.getMessage();
+                        String message = "Failed to delete user SID " + user.getSid() + " from registry. Error is " + e.getMessage();
                         deleted_user += message + '\t';
-                        LogMessage(message, LOG_TYPE.ERROR, true);
+                        logMessage(message, LOG_TYPE.ERROR, true);
                     }
                     try{
-                        if(user.guid.compareTo("") != 0) {
-                            DeleteRegistry(computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid\\" + user.guid);
-                            deleted_user += "Yes " + user.guid;
-                            LogMessage("Successfully deleted GUID " + user.guid + " for user " + user.name, LOG_TYPE.INFO, true);
+                        if(user.getGuid().compareTo("") != 0) {
+                            registryDelete(computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid\\" + user.getGuid());
+                            deleted_user += "Yes " + user.getGuid();
+                            logMessage("Successfully deleted GUID " + user.getGuid() + " for user " + user.getName(), LOG_TYPE.INFO, true);
                         } else {
                             deleted_user += "GUID is blank";
-                            LogMessage("GUID for user " + user.name + " is blank", LOG_TYPE.WARNING, true);
+                            logMessage("GUID for user " + user.getName() + " is blank", LOG_TYPE.WARNING, true);
                         }
                     } catch(IOException | InterruptedException e) {
-                        String message = "Failed to delete user GUID " + user.guid + " from registry. Error is " + e.getMessage();
+                        String message = "Failed to delete user GUID " + user.getGuid() + " from registry. Error is " + e.getMessage();
                         deleted_user += message;
-                        LogMessage(message, LOG_TYPE.ERROR, true);
+                        logMessage(message, LOG_TYPE.ERROR, true);
                     }
                     deleted_folders.add(deleted_user);
                 } else {
@@ -540,16 +553,16 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                 }
             }
             user_list = new_folders;
-            LogMessage("Successfully completed deletions", LOG_TYPE.INFO, true);
+            logMessage("Successfully completed deletions", LOG_TYPE.INFO, true);
             return deleted_folders;
         } else {
-            String message = "Either user list has not been initialised or an SID + GUID registry check has not been run";
-            LogMessage(message, LOG_TYPE.WARNING, true);
+            String message = "Either user list has not been initialised or a state and/or registry check has not been run";
+            logMessage(message, LOG_TYPE.WARNING, true);
             throw new NotInitialisedException(message);
         }
     }
     
-    public void UpdateTableData() {
+    public void updateTableData() {
         results_table.getModel().removeTableModelListener(this);
         results_table.setModel(new AbstractTableModel () {
             private String[] columnNames = UserData.HeadingsToStringArray();
@@ -605,35 +618,30 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         });
         results_table.setAutoCreateRowSorter(true);
         results_table.getModel().addTableModelListener(this);
-        
-        /*
-        ((DeleterTableModel)results_table.getModel()).setRowData(ConvertFoldersTo2DObjectArray());
-        results_table.setAutoCreateRowSorter(true);
-        ((DeleterTableModel)results_table.getModel()).fireTableDataChanged();*/
     }
     
     @Override
     public void actionPerformed(ActionEvent e) {
-        if ("SetComputer" == e.getActionCommand()) {
-            SetComputerButton();
+        if ("setComputer" == e.getActionCommand()) {
+            setComputerButton();
         } else if ("RerunChecks" == e.getActionCommand()) {
-            RerunChecksButton();
+            rerunChecksButton();
         } else if ("RunDeletion" == e.getActionCommand()) {
-            RunDeletionButton();
-        } else if ("WriteLog" == e.getActionCommand()) {
-            WriteLogButton();
+            runDeletionButton();
+        } else if ("writeLog" == e.getActionCommand()) {
+            writeLogButton();
         } else if ("SizeCheckToggle" == e.getActionCommand()) {
-            SizeCheckCheckbox();
+            sizeCheckCheckbox();
         } else if ("StateCheckToggle" == e.getActionCommand()) {
-            StateCheckCheckbox();
+            stateCheckCheckbox();
         } else if ("RegistryCheckToggle" == e.getActionCommand()) {
-            RegistryCheckCheckbox();
+            registryCheckCheckbox();
         } else if ("Exit" == e.getActionCommand()) {
-            ExitButton();
+            exitButton();
         }
     }
     
-    public void SetComputerButton() {
+    public void setComputerButton() {
         computer_name_text_field.setEnabled(false);
         set_computer_button.setEnabled(false);
         size_check_checkbox.setEnabled(false);
@@ -643,10 +651,10 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         run_deletion_button.setEnabled(false);
         write_log_button.setEnabled(false);
         results_table.setEnabled(false);
-        (set_computer_thread = new SetComputerThread()).execute();
+        (set_computer_thread = new setComputerThread()).execute();
     }
     
-    public void RerunChecksButton() {
+    public void rerunChecksButton() {
         computer_name_text_field.setEnabled(false);
         set_computer_button.setEnabled(false);
         size_check_checkbox.setEnabled(false);
@@ -656,10 +664,10 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         run_deletion_button.setEnabled(false);
         write_log_button.setEnabled(false);
         results_table.setEnabled(false);
-        (rerun_checks_thread = new RerunChecksThread()).execute();
+        (rerun_checks_thread = new rerunChecksThread()).execute();
     }
     
-    public void RunDeletionButton() {
+    public void runDeletionButton() {
         computer_name_text_field.setEnabled(false);
         set_computer_button.setEnabled(false);
         size_check_checkbox.setEnabled(false);
@@ -669,10 +677,10 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         run_deletion_button.setEnabled(false);
         write_log_button.setEnabled(false);
         results_table.setEnabled(false);
-        (run_deletion_thread = new RunDeletionThread()).execute();
+        (run_deletion_thread = new runDeletionThread()).execute();
     }
     
-    public void WriteLogButton() {
+    public void writeLogButton() {
         computer_name_text_field.setEnabled(false);
         set_computer_button.setEnabled(false);
         size_check_checkbox.setEnabled(false);
@@ -682,30 +690,30 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         run_deletion_button.setEnabled(false);
         write_log_button.setEnabled(false);
         results_table.setEnabled(false);
-        (write_log_thread = new WriteLogThread()).execute();
+        (write_log_thread = new writeLogThread()).execute();
     }
     
-    public void SizeCheckCheckbox() {
+    public void sizeCheckCheckbox() {
         size_check = size_check_checkbox.isSelected();
     }
     
-    public void StateCheckCheckbox() {
+    public void stateCheckCheckbox() {
         state_check = state_check_checkbox.isSelected();
     }
     
-    public void RegistryCheckCheckbox() {
+    public void registryCheckCheckbox() {
         registry_check = registry_check_checkbox.isSelected();
     }
     
-    public void ExitButton() {
+    public void exitButton() {
         System.exit(0);
     }
     
-    public void BackupAndCopyRegistry() throws IOException, InterruptedException, CannotEditException, NotInitialisedException {
-        LogMessage("Attempting to backup profilelist and profileguid registry keys on remote computer", LOG_TYPE.INFO, true);
+    public void backupAndCopyRegistry() throws IOException, InterruptedException, CannotEditException, NotInitialisedException {
+        logMessage("Attempting to backup profilelist and profileguid registry keys on remote computer", LOG_TYPE.INFO, true);
         if(local_data_directory.compareTo("") == 0 || remote_data_directory.compareTo("") == 0) {
             String message = "Local or remote data directory has not been initialised";
-            LogMessage(message, LOG_TYPE.WARNING, true);
+            logMessage(message, LOG_TYPE.WARNING, true);
             throw new NotInitialisedException(message);
         } else {
             String filename_friendly_computer = computer.replace('.', '_');
@@ -713,39 +721,13 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
             boolean run = true;
             while(run) {
                 try {
-                    BackupRegistry(computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList", "C:\\temp\\Profile_Deleter\\" + session_id + "\\" + filename_friendly_computer + "_ProfileList.reg");
+                    registryBackup(computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList", "C:\\temp\\Profile_Deleter\\" + session_id + "\\" + filename_friendly_computer + "_ProfileList.reg");
                     run = false;
                 } catch(IOException | CannotEditException e) {
                     if(count > 29) {
-                        /*
-                        LogMessage("Back up of registry key has failed too many times. You may not have permission to backup the registry, you may not have permissions to create user_list and files in \\\\" + computer + "\\C$\\temp, or the drive may not have a couple of MB free to create the registry backups needed. Check permissions or delete some files from the remote PC. Awaiting prompt from user", LOG_TYPE.WARNING, true);
-                        System.out.println("Failed to backup registry file \"HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\ProfileList\". You may not have permission to backup the registry, you may not have permissions to create user_list and files in \\\\" + computer + "\\C$\\temp, or the drive may not have a couple of MB free to create the registry backups needed.");
-                        System.out.println("1. Retry (it is recommended you manually delete a few MB of files before retrying)");
-                        System.out.println("2. Delete all files in \\\\" + computer + "\\C$\\temp except BGInfo.bmp and retry");
-                        System.out.println("3. Stop running registry backup");
-                        System.out.println("Please enter an option (1-3):");
-                        String option = console_in.readLine();
-                        if(option.compareTo("1") == 0) {
-                            LogMessage("User has selected to retry registry backup", LOG_TYPE.INFO, true);
-                            count = 0;
-                        } else if(option.compareTo("2") == 0) {
-                            LogMessage("User has selected to delete all files in \\\\" + computer + "\\C$\\temp except BGInfo.bmp and retry", LOG_TYPE.INFO, true);
-                            count = 0;
-                            List<String> exclude_files = new ArrayList<String>();
-                            exclude_files.add("BGInfo.bmp");
-                            exclude_files.add("bginfo.bmp");
-                            List<String> files_to_delete = GetFileList("\\\\" + computer + "\\C$\\temp");
-                            DeleteFilesInDirectory("\\\\" + computer + "\\C$\\temp", files_to_delete, exclude_files);
-                        } else if(option.compareTo("3") == 0) {
-                            LogMessage("User has selected to stop running registry backup", LOG_TYPE.INFO, true);
-                            throw e;
-                        } else {
-                            System.out.println("Invalid option");
-                            System.out.println("");
-                        }*/
                         throw e;
                     } else {
-                        LogMessage("Attempt " + Integer.toString(count+1) + " at backing up registry key failed", LOG_TYPE.WARNING, true);
+                        logMessage("Attempt " + Integer.toString(count+1) + " at backing up registry key failed", LOG_TYPE.WARNING, true);
                         count++;
                     }
                 }
@@ -754,68 +736,43 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
             count = 0;
             while(run) {
                 try {
-                    BackupRegistry(computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid", "C:\\temp\\Profile_Deleter\\" + session_id + "\\" + filename_friendly_computer + "_ProfileGuid.reg");
+                    registryBackup(computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid", "C:\\temp\\Profile_Deleter\\" + session_id + "\\" + filename_friendly_computer + "_ProfileGuid.reg");
                     run = false;
                 } catch(IOException | CannotEditException e) {
-                    if(count > 29) {/*
-                        LogMessage("Back up of registry key has failed too many times. You may not have permission to backup the registry, you may not have permissions to create user_list and files in \\\\" + computer + "\\C$\\temp, or the drive may not have a couple of MB free to create the registry backups needed. Check permissions or delete some files from the remote PC. Awaiting prompt from user", LOG_TYPE.WARNING, true);
-                        System.out.println("Failed to backup registry file \"HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\ProfileGuid\". You may not have permission to backup the registry, you may not have permissions to create user_list and files in \\\\" + computer + "\\C$\\temp, or the drive may not have a couple of MB free to create the registry backups needed.");
-                        System.out.println("1. Retry (it is recommended you manually delete a few MB of files before retrying)");
-                        System.out.println("2. Delete all files in \\\\" + computer + "\\C$\\temp except BGInfo.bmp and retry");
-                        System.out.println("3. Stop running registry backup");
-                        System.out.println("Please enter an option (1-3):");
-                        String option = console_in.readLine();
-                        if(option.compareTo("1") == 0) {
-                            LogMessage("User has selected to retry registry backup", LOG_TYPE.INFO, true);
-                            count = 0;
-                        } else if(option.compareTo("2") == 0) {
-                            LogMessage("User has selected to delete all files in \\\\" + computer + "\\C$\\temp except BGInfo.bmp and retry", LOG_TYPE.INFO, true);
-                            count = 0;
-                            List<String> exclude_files = new ArrayList<String>();
-                            exclude_files.add("BGInfo.bmp");
-                            exclude_files.add("bginfo.bmp");
-                            List<String> files_to_delete = GetFileList("\\\\" + computer + "\\C$\\temp");
-                            DeleteFilesInDirectory("\\\\" + computer + "\\C$\\temp", files_to_delete, exclude_files);
-                        } else if(option.compareTo("3") == 0) {
-                            LogMessage("User has selected to stop running registry backup", LOG_TYPE.INFO, true);
-                            throw e;
-                        } else {
-                            System.out.println("Invalid option");
-                            System.out.println("");
-                        }*/
+                    if(count > 29) {
                         throw e;
                     } else {
-                        LogMessage("Attempt " + Integer.toString(count+1) + " at backing up registry key failed", LOG_TYPE.WARNING, true);
+                        logMessage("Attempt " + Integer.toString(count+1) + " at backing up registry key failed", LOG_TYPE.WARNING, true);
                         count++;
                     }
                 }
             }
             try {
-                CopyFile(remote_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg", local_data_directory);
+                fileCopy(remote_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg", local_data_directory);
             } catch(IOException |  CannotEditException e) {
                 throw e;
             }
             try {
-                CopyFile(remote_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg", local_data_directory);
+                fileCopy(remote_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg", local_data_directory);
             } catch(IOException | CannotEditException e) {
                 throw e;
             }
         }
     }
     
-    public void FindSIDAndGUID() throws IOException, NotInitialisedException {
-        LogMessage("Attempting to compile SID and GUID data from registry backups", LOG_TYPE.INFO, true);
+    public void findSIDAndGUID() throws IOException, NotInitialisedException {
+        logMessage("Attempting to compile SID and GUID data from registry backups", LOG_TYPE.INFO, true);
         if(local_data_directory.compareTo("") != 0) {
             List<String> regkeys_profile_list;
             List<String> regkeys_profile_guid;
             String filename_friendly_computer = computer.replace('.', '_');
             try {
-                LogMessage("Loading file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg", LOG_TYPE.INFO, true);
-                regkeys_profile_list = ReadFromFile(local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg");
-                LogMessage("Loading file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg", LOG_TYPE.INFO, true);
-                regkeys_profile_guid = ReadFromFile(local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg");
+                logMessage("Loading file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg", LOG_TYPE.INFO, true);
+                regkeys_profile_list = r(local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg");
+                logMessage("Loading file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg", LOG_TYPE.INFO, true);
+                regkeys_profile_guid = r(local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg");
                 if(regkeys_profile_list != null && !regkeys_profile_list.isEmpty() && regkeys_profile_guid != null && !regkeys_profile_guid.isEmpty()) {
-                    LogMessage("Cleaning data from file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg", LOG_TYPE.INFO, true);
+                    logMessage("Cleaning data from file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg", LOG_TYPE.INFO, true);
                     List<String> cleaned_regkeys_profile_list = new ArrayList<String>();
                     List<String> cleaned_regkeys_profile_guid = new ArrayList<String>();
                     for(int i=0;i<regkeys_profile_list.size();i++) {
@@ -830,7 +787,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                         }
                     }
                     regkeys_profile_list = cleaned_regkeys_profile_list;
-                    LogMessage("Cleaning data from file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg", LOG_TYPE.INFO, true);
+                    logMessage("Cleaning data from file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg", LOG_TYPE.INFO, true);
                     for(int i=0;i<regkeys_profile_guid.size();i++) {
                         if((i % 2) == 0) {
                             String cleaned_string = "";
@@ -848,63 +805,63 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                     String profile_guid = "";
                     boolean found_profile_path = false;
                     int count = 0;
-                    LogMessage("Processing file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg", LOG_TYPE.INFO, true);
+                    logMessage("Processing file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg", LOG_TYPE.INFO, true);
                     for(String line : regkeys_profile_list) {
                         if(line.startsWith("[HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\") || count == regkeys_profile_list.size()-1) {
                             String new_sid = line.replace("[HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\", "");
                             new_sid = new_sid.replaceAll("]", "");
                             new_sid = new_sid.trim();
-                            LogMessage("Found new SID " + new_sid, LOG_TYPE.INFO, true);
+                            logMessage("Found new SID " + new_sid, LOG_TYPE.INFO, true);
                             if(!profile_path.isEmpty()) {
-                                LogMessage("Processing details for found profile " + profile_path, LOG_TYPE.INFO, true);
+                                logMessage("Processing details for found profile " + profile_path, LOG_TYPE.INFO, true);
                                 boolean found_user = false;
                                 for(UserData user : user_list) {
-                                    if(user.name.compareTo(profile_path) == 0) {
+                                    if(user.getName().compareTo(profile_path) == 0) {
                                         found_user = true;
-                                        LogMessage("Found matching user account", LOG_TYPE.INFO, true);
-                                        if(!user.sid.isEmpty()) {
-                                            LogMessage("SID already exists for user, resolving conflict", LOG_TYPE.INFO, true);
+                                        logMessage("Found matching user account", LOG_TYPE.INFO, true);
+                                        if(!user.getSid().isEmpty()) {
+                                            logMessage("SID already exists for user, resolving conflict", LOG_TYPE.INFO, true);
                                             boolean found_guid = false;
                                             for(String guid : regkeys_profile_guid) {
                                                 if(guid.contains("[HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid\\")) {
                                                     String trimmed_guid = guid.replace("[HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid\\", "");
                                                     trimmed_guid = trimmed_guid.replaceAll("]", "");
                                                     if(trimmed_guid.compareTo(profile_guid) == 0) {
-                                                        LogMessage("Found matching GUID from " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg. Checking SID for match", LOG_TYPE.INFO, true);
+                                                        logMessage("Found matching GUID from " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg. Checking SID for match", LOG_TYPE.INFO, true);
                                                         found_guid = true;
                                                     }
                                                 } else if(found_guid) {
                                                     String sid = guid.replace("\"SidString\"=\"", "");
                                                     sid = sid.replaceAll("\"", "");
                                                     if(sid.compareTo(current_sid) == 0) {
-                                                        LogMessage("New SID details match SID details for GUID, replacing user details with new details. SID set to " + current_sid + " and GUID to " + profile_guid, LOG_TYPE.INFO, true);
-                                                        user_list.get(user_list.indexOf(user)).sid = current_sid;
-                                                        user_list.get(user_list.indexOf(user)).guid = profile_guid;
+                                                        logMessage("New SID details match SID details for GUID, replacing user details with new details. SID set to " + current_sid + " and GUID to " + profile_guid, LOG_TYPE.INFO, true);
+                                                        user_list.get(user_list.indexOf(user)).setSid(current_sid);
+                                                        user_list.get(user_list.indexOf(user)).setGuid(profile_guid);
                                                         break;
                                                     }
                                                 }
                                             }
-                                            LogMessage("No match found, discarding new details found", LOG_TYPE.INFO, true);
+                                            logMessage("No match found, discarding new details found", LOG_TYPE.INFO, true);
                                         } else {
-                                            LogMessage("Set SID for user " + profile_path + " to " + current_sid + " and GUID to " + profile_guid, LOG_TYPE.INFO, true);
-                                            user_list.get(user_list.indexOf(user)).sid = current_sid;
-                                            user_list.get(user_list.indexOf(user)).guid = profile_guid;
+                                            logMessage("Set SID for user " + profile_path + " to " + current_sid + " and GUID to " + profile_guid, LOG_TYPE.INFO, true);
+                                            user_list.get(user_list.indexOf(user)).setSid(current_sid);
+                                            user_list.get(user_list.indexOf(user)).setGuid(profile_guid);
                                         }
                                         break;
                                     }
                                 }
                                 if(!found_user) {
-                                    LogMessage("No matching user found for profile " + profile_path, LOG_TYPE.INFO, true);
+                                    logMessage("No matching user found for profile " + profile_path, LOG_TYPE.INFO, true);
                                 }
                                 current_sid = new_sid;
                                 profile_path = "";
                                 profile_guid = "";
                             } else {
                                 current_sid = new_sid;
-                                LogMessage("SID is " + current_sid, LOG_TYPE.INFO, true);
+                                logMessage("SID is " + current_sid, LOG_TYPE.INFO, true);
                             }
                         } else if(line.startsWith("\"ProfileImagePath\"")) {
-                            LogMessage("User directory exists in SID, processing details", LOG_TYPE.INFO, true);
+                            logMessage("User directory exists in SID, processing details", LOG_TYPE.INFO, true);
                             profile_path = line;
                             found_profile_path = true;
                         } else if(found_profile_path) {
@@ -926,32 +883,32 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                                 profile_path = profile_path_hex_to_string.replace("C:\\Users\\", "");
                                 profile_path = profile_path.trim();
                                 found_profile_path = false;
-                                LogMessage("Found user directory " + profile_path, LOG_TYPE.INFO, true);
+                                logMessage("Found user directory " + profile_path, LOG_TYPE.INFO, true);
                             }
                         } else if(line.startsWith("\"Guid\"")) {
                             profile_guid = line.replace("\"Guid\"=\"", "");
                             profile_guid = profile_guid.replaceAll("\"", "");
                             profile_guid = profile_guid.trim();
-                            LogMessage("Found GUID " + profile_guid, LOG_TYPE.INFO, true);
+                            logMessage("Found GUID " + profile_guid, LOG_TYPE.INFO, true);
                         }
                         count++;
                     }
                     registry_check_complete = true;
-                    LogMessage("Successfully compiled SID and GUID data from registry backups", LOG_TYPE.INFO, true);
+                    logMessage("Successfully compiled SID and GUID data from registry backups", LOG_TYPE.INFO, true);
                 } else {
                     String message = "File " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg or " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg is either empty or corrupt";
-                    LogMessage(message, LOG_TYPE.ERROR, true);
+                    logMessage(message, LOG_TYPE.ERROR, true);
                     throw new NotInitialisedException(message);
                 }
             } catch(IOException e) {
-                LogMessage("Unable to read file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg. File may not exist. Error is " + e.getMessage(), LOG_TYPE.ERROR, true);
+                logMessage("Unable to read file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg. File may not exist. Error is " + e.getMessage(), LOG_TYPE.ERROR, true);
                 throw e;
             }
         }
     }
 
-    public void BuildDirectory() throws IOException {
-        LogMessage("Attempting to build users directory " + users_directory, LOG_TYPE.INFO, true);
+    public void generateUserList() throws IOException {
+        logMessage("Attempting to build users directory " + users_directory, LOG_TYPE.INFO, true);
         if(users_directory.compareTo("") != 0) {
             try{
                     user_list = new ArrayList<>();
@@ -963,123 +920,147 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                     String output = "";
                     String line = "";
                     while((line = powershell_process_output_stream.readLine()).compareTo("EndOfScriptGetDirectoryList") != 0) {
-                            if(!line.isEmpty()) {
-                                    LogMessage("Discovered folder details " + line, LOG_TYPE.INFO, true);
-                                    String[] line_split = line.split("\\t");
-                                    UserData folder = new UserData();
-                                    if(line_split[0].compareTo("Public") == 0) {
-                                        folder.delete = false;
-                                    } else {
-                                        folder.delete = true;
-                                    }
-                                    folder.name = line_split[0];
-                                    folder.last_updated = line_split[1];
-                                    folder.size = "";
-                                    folder.state = "";
-                                    folder.sid = "";
-                                    folder.guid = "";
-                                    user_list.add(folder);
-                            }
+                        if(!line.isEmpty()) {
+                                logMessage("Discovered folder details " + line, LOG_TYPE.INFO, true);
+                                String[] line_split = line.split("\\t");
+                                UserData user = new UserData(true, line_split[0], line_split[1], "", "", "", "");
+                                if(line_split[0].compareTo("Public") == 0) {
+                                    user.setDelete(false);
+                                }
+                                user_list.add(user);
+                        }
                     }
                     powershell_process_output_stream.close();
                     power_shell_process.destroy();
                     setTitle("Profile Deleter - " + computer);
-                    LogMessage("Successfully built users directory " + users_directory, LOG_TYPE.INFO, true);
+                    logMessage("Successfully built users directory " + users_directory, LOG_TYPE.INFO, true);
             } catch(IOException e) {
-                LogMessage("Failed to build users directory " + users_directory, LOG_TYPE.ERROR, true);
-                LogMessage(e.getMessage(), LOG_TYPE.ERROR, true);
+                logMessage("Failed to build users directory " + users_directory, LOG_TYPE.ERROR, true);
+                logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
                 throw e;
             }
         } else {
-            LogMessage("Computer name has not been specified. Building users directory has been aborted", LOG_TYPE.WARNING, true);
+            logMessage("Computer name has not been specified. Building users directory has been aborted", LOG_TYPE.WARNING, true);
         }
     }
 
-    public void CheckState() throws IOException {
-        LogMessage("Checking editable state of directory list", LOG_TYPE.INFO, true);
-        if(user_list.size() > 0 && users_directory.compareTo("") != 0) {
-            for(int i=0;i<user_list.size();i++) {
-                String folder = user_list.get(i).name;
-                LogMessage("Checking editable state of folder " + folder, LOG_TYPE.INFO, true);
-                try {
-                    RenameDirectory(computer, "C:\\users\\", folder, folder);
-                    user_list.get(i).state = "Editable";
-                    user_list.get(i).delete = true;
-                } catch(CannotEditException e) {
-                    String message = "Uneditable. User may be logged in or PC may need to be restarted";
-                    LogMessage(message, LOG_TYPE.WARNING, true);
-                    user_list.get(i).state = message;
-                    user_list.get(i).delete = false;
-                } catch(IOException e) {
-                    LogMessage("Editable state check has failed", LOG_TYPE.ERROR, true);
-                    LogMessage(e.getMessage(), LOG_TYPE.ERROR, true);
-                    throw e;
-                }
-            }
-            state_check_complete = true;
-            LogMessage("Finished checking editable state of directory list", LOG_TYPE.INFO, true);
-        } else {
-            LogMessage("Directory list is empty, aborting editable state check", LOG_TYPE.WARNING, true);
-        }
-    }
-
-    public void CheckSize() {
-        LogMessage("Calcuting size of directory list", LOG_TYPE.INFO, true);
+    public void checkSize() {
+        logMessage("Calcuting size of directory list", LOG_TYPE.INFO, true);
         if(user_list.size() > 0 && users_directory.compareTo("") != 0) {
             Double total_size = 0.0;
             for(int i=0;i<user_list.size();i++) {
-                String folder = user_list.get(i).name;
+                String folder = user_list.get(i).getName();
                 String folder_size = "";
                 try {
-                    folder_size = FolderSize(folder);
+                    folder_size = findFolderSize(folder);
                     total_size += Double.parseDouble(folder_size);
-                    LogMessage("Calculated size " + folder_size + " for folder " + folder, LOG_TYPE.INFO, true);
+                    logMessage("Calculated size " + folder_size + " for folder " + folder, LOG_TYPE.INFO, true);
                 } catch(NonNumericException | IOException e) {
                     folder_size = "Could not calculate size";
-                    LogMessage(folder_size + " for folder " + folder, LOG_TYPE.WARNING, true);
-                    LogMessage(e.getMessage(), LOG_TYPE.ERROR, true);
+                    logMessage(folder_size + " for folder " + folder, LOG_TYPE.WARNING, true);
+                    logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
                 }
-                user_list.get(i).size = folder_size;
+                user_list.get(i).setSize(folder_size);
             }
             //Double size_in_megabytes = total_size / (1024.0 * 1024.0);
             setTitle("Profile Deleter - " + computer + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
             size_check_complete = true;
-            LogMessage("Finished calculating size of directory list", LOG_TYPE.INFO, true);
+            logMessage("Finished calculating size of directory list", LOG_TYPE.INFO, true);
         } else {
-            LogMessage("Directory list is empty, aborting size calculation", LOG_TYPE.WARNING, true);
+            logMessage("Directory list is empty, aborting size calculation", LOG_TYPE.WARNING, true);
         }
     }
 
-    public void GenerateSessionID() {
-        session_id = GenerateDateString();
-        LogMessage("Session ID has been set to " + session_id, LOG_TYPE.INFO, true);
+    public void checkState() throws IOException {
+        logMessage("Checking editable state of directory list", LOG_TYPE.INFO, true);
+        if(user_list.size() > 0 && users_directory.compareTo("") != 0) {
+            for(int i=0;i<user_list.size();i++) {
+                String folder = user_list.get(i).getName();
+                logMessage("Checking editable state of folder " + folder, LOG_TYPE.INFO, true);
+                try {
+                    directoryRename(computer, "C:\\users\\", folder, folder);
+                    user_list.get(i).setState("Editable");
+                    user_list.get(i).setDelete(true);
+                } catch(CannotEditException e) {
+                    String message = "Uneditable. User may be logged in or PC may need to be restarted";
+                    logMessage(message, LOG_TYPE.WARNING, true);
+                    user_list.get(i).setState(message);
+                    user_list.get(i).setDelete(false);
+                } catch(IOException e) {
+                    logMessage("Editable state check has failed", LOG_TYPE.ERROR, true);
+                    logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
+                    throw e;
+                }
+            }
+            state_check_complete = true;
+            logMessage("Finished checking editable state of directory list", LOG_TYPE.INFO, true);
+        } else {
+            logMessage("Directory list is empty, aborting editable state check", LOG_TYPE.WARNING, true);
+        }
     }
 
-    public void CreateSessionFolders() throws NotInitialisedException, IOException, CannotEditException {
-        LogMessage("Attempting to create session user_list", LOG_TYPE.INFO, true);
+    public void checkRegistry() {
+        logMessage("Getting registry SID and GUID values for user list", LOG_TYPE.INFO, true);
+        generateSessionID();
+        try {
+            generateSessionFolders();
+            try {
+                backupAndCopyRegistry();
+                try {
+                    findSIDAndGUID();
+                } catch(IOException | NotInitialisedException e) {
+                    logMessage("Unable to process SID and GUID registry data, error is: " + e.getMessage(), LOG_TYPE.ERROR, true);
+                }
+            } catch(IOException | CannotEditException | NotInitialisedException | InterruptedException e) {
+                logMessage("Unable to backup registry files, error is: " + e.getMessage(), LOG_TYPE.ERROR, true);
+            }
+        } catch(IOException | CannotEditException | NotInitialisedException e) {
+            logMessage("Unable to create session folders, error is: " + e.getMessage(), LOG_TYPE.ERROR, true);
+        }
+    }
+
+    public void checkAll() {
+        if(size_check) {
+            checkSize();
+        }
+        if(state_check) {
+            checkState();
+        }
+        if(registry_check) {
+            checkRegistry();
+        }
+    }
+
+    public void generateSessionID() {
+        session_id = generateDateString();
+        logMessage("Session ID has been set to " + session_id, LOG_TYPE.INFO, true);
+    }
+
+    public void generateSessionFolders() throws NotInitialisedException, IOException, CannotEditException {
+        logMessage("Attempting to create session user_list", LOG_TYPE.INFO, true);
         if(session_id.compareTo("") != 0 && computer.compareTo("") != 0) {
             try {
-                MakeDirectory("\\\\" + computer + "\\c$\\temp\\Profile_Deleter");
+                directoryCreate("\\\\" + computer + "\\c$\\temp\\Profile_Deleter");
             } catch(IOException e) {
                 throw e;
             } catch(CannotEditException e) {}
             try {
-                MakeDirectory("\\\\" + computer + "\\c$\\temp\\Profile_Deleter\\" + session_id);
+                directoryCreate("\\\\" + computer + "\\c$\\temp\\Profile_Deleter\\" + session_id);
                 remote_data_directory = "\\\\" + computer + "\\c$\\temp\\Profile_Deleter\\" + session_id;
             } catch(IOException | CannotEditException e) {
                 String message = "Unable to create remote data directory " + "\\\\" + computer + "\\c$\\temp\\Profile_Deleter\\" + session_id;
-                LogMessage(message, LOG_TYPE.ERROR, true);
+                logMessage(message, LOG_TYPE.ERROR, true);
                 throw new CannotEditException(message);
             }
             try {
-                MakeDirectory(".\\sessions\\" + computer + "_" + session_id);
+                directoryCreate(".\\sessions\\" + computer + "_" + session_id);
                 local_data_directory = ".\\sessions\\" + computer + "_" + session_id;
             } catch(IOException | CannotEditException e) {
                 String message = "Unable to create local data directory " + ".\\sessions\\" + computer + "_" + session_id;
-                LogMessage(message, LOG_TYPE.ERROR, true);
+                logMessage(message, LOG_TYPE.ERROR, true);
                 throw new CannotEditException(message);
             }
-            LogMessage("Successfully created session user_list", LOG_TYPE.INFO, true);
+            logMessage("Successfully created session user_list", LOG_TYPE.INFO, true);
         } else {
             String message = "";
             if(session_id.compareTo("") == 0) {
@@ -1091,15 +1072,15 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                 }
                 message += "computer has not been initialised";
             }
-            message += ". Please Initialise before running CreateSessionFolders";
-            LogMessage(message, LOG_TYPE.ERROR, true);
+            message += ". Please Initialise before running generateSessionFolders";
+            logMessage(message, LOG_TYPE.ERROR, true);
             throw new NotInitialisedException(message);
         }
     }
 
-    public void RenameDirectory(String computer, String directory, String folder, String folder_renamed) throws IOException, CannotEditException {
+    public void directoryRename(String computer, String directory, String folder, String folder_renamed) throws IOException, CannotEditException {
         try{
-            LogMessage("Attempting to rename folder " + directory + folder + " to " + folder_renamed , LOG_TYPE.INFO, true);
+            logMessage("Attempting to rename folder " + directory + folder + " to " + folder_renamed , LOG_TYPE.INFO, true);
             String command = ".\\pstools\\psexec \\\\" + computer + " cmd /c REN \"" + directory + folder + "\" \"" + folder_renamed + "\" && echo editable|| echo uneditable";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);	
@@ -1114,17 +1095,17 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                 String message = "Unable to rename folder " + directory + folder + ". Error is: " + error;
                 throw new CannotEditException(message);
             }
-            LogMessage("Successfully renamed folder " + directory + folder + " to " + folder_renamed , LOG_TYPE.INFO, true);
+            logMessage("Successfully renamed folder " + directory + folder + " to " + folder_renamed , LOG_TYPE.INFO, true);
         } catch(CannotEditException | IOException e) {
-            LogMessage("Could not rename directory " + directory + folder, LOG_TYPE.WARNING, true);
-            LogMessage(e.getMessage(), LOG_TYPE.WARNING, true);
+            logMessage("Could not rename directory " + directory + folder, LOG_TYPE.WARNING, true);
+            logMessage(e.getMessage(), LOG_TYPE.WARNING, true);
             throw e;
         }
     }
 
-    public String FolderSize(String folder) throws NonNumericException, IOException {
+    public String findFolderSize(String folder) throws NonNumericException, IOException {
         try{
-            LogMessage("Calculating filesize for folder " + users_directory + folder, LOG_TYPE.INFO, true);
+            logMessage("Calculating filesize for folder " + users_directory + folder, LOG_TYPE.INFO, true);
             String command = "Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process | powershell.exe -File \".\\src\\GetFolderSize.ps1\" - directory " + users_directory + folder;
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-command", command);
             builder.redirectErrorStream(true);	
@@ -1143,23 +1124,23 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                 /*Long size_in_bytes = Long.parseLong(output);
                 Long size_in_megabytes = size_in_bytes / (1024L * 1024L);
                 return Long.toString(size_in_megabytes) + " MB";*/
-                LogMessage("Successfully calculated filesize for folder " + users_directory + folder + ": " + output, LOG_TYPE.INFO, true);
+                logMessage("Successfully calculated filesize for folder " + users_directory + folder + ": " + output, LOG_TYPE.INFO, true);
                 return output;
             } else {
                 String message = "Size calculated is not a number. Ensure powershell script .\\src\\GetFolderSize.ps1 is correct";
-                LogMessage(message, LOG_TYPE.ERROR, true);
+                logMessage(message, LOG_TYPE.ERROR, true);
                 throw new NonNumericException(message);
             }
         } catch(NonNumericException | IOException e) {
-            LogMessage("Could not calculate size of folder " + users_directory + folder, LOG_TYPE.ERROR, true);
-            LogMessage(e.getMessage(), LOG_TYPE.ERROR, true);
+            logMessage("Could not calculate size of folder " + users_directory + folder, LOG_TYPE.ERROR, true);
+            logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
         }
     }
 
-    public void MakeDirectory(String directory) throws IOException, CannotEditException {
+    public void directoryCreate(String directory) throws IOException, CannotEditException {
         try{
-            LogMessage("Attempting to create folder " + directory, LOG_TYPE.INFO, true);
+            logMessage("Attempting to create folder " + directory, LOG_TYPE.INFO, true);
             String command = "MKDIR \"" + directory + "\"";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);	
@@ -1172,22 +1153,22 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
             }
             if(error.compareTo("") != 0) {
                 String message = "Folder " + directory + " already exists. Error is: " + error;
-                LogMessage(message, LOG_TYPE.WARNING, true);
+                logMessage(message, LOG_TYPE.WARNING, true);
                 throw new CannotEditException(message);
             }
-            LogMessage("Successfully created folder " + directory, LOG_TYPE.INFO, true);
+            logMessage("Successfully created folder " + directory, LOG_TYPE.INFO, true);
         } catch(IOException e) {
-            LogMessage("Could not create folder " + directory, LOG_TYPE.ERROR, true);
-            LogMessage(e.getMessage(), LOG_TYPE.ERROR, true);
+            logMessage("Could not create folder " + directory, LOG_TYPE.ERROR, true);
+            logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
         } catch(CannotEditException e) {
             throw e;
         }
     }
 
-    public void DeleteDirectory(String directory) throws IOException, CannotEditException {
+    public void directoryDelete(String directory) throws IOException, CannotEditException {
         try{
-            LogMessage("Attempting to delete folder " + directory, LOG_TYPE.INFO, true);
+            logMessage("Attempting to delete folder " + directory, LOG_TYPE.INFO, true);
             String command = "RMDIR /S /Q \"" + directory + "\"";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);	
@@ -1200,20 +1181,20 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
             }
             if(error.compareTo("") != 0) {
                 String message = "Unable to delete folder " + directory + ". Error is: " + error;
-                LogMessage(message, LOG_TYPE.ERROR, true);
+                logMessage(message, LOG_TYPE.ERROR, true);
                 throw new CannotEditException(message);
             }
-            LogMessage("Successfully deleted folder " + directory, LOG_TYPE.INFO, true);
+            logMessage("Successfully deleted folder " + directory, LOG_TYPE.INFO, true);
         } catch(CannotEditException | IOException e) {
-            LogMessage("Could not delete folder " + directory, LOG_TYPE.ERROR, true);
-            LogMessage(e.getMessage(), LOG_TYPE.ERROR, true);
+            logMessage("Could not delete folder " + directory, LOG_TYPE.ERROR, true);
+            logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
         }
     }
     
-    public void DeleteFilesInDirectory(String directory, List<String> files, List<String> do_not_delete) throws IOException, CannotEditException {
+    public void directoryDeleteAllFiles(String directory, List<String> files, List<String> do_not_delete) throws IOException, CannotEditException {
         try{
-            LogMessage("Attempting to delete list of files in directory " + directory, LOG_TYPE.INFO, true);
+            logMessage("Attempting to delete list of files in directory " + directory, LOG_TYPE.INFO, true);
             for(String file : files) {
                 boolean delete = true;
                 if(do_not_delete != null) {
@@ -1236,24 +1217,24 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                     }
                     if(error.compareTo("") != 0) {
                         String message = "Unable to delete file " + directory + "\\" + file + ". Error is: " + error;
-                        LogMessage(message, LOG_TYPE.ERROR, true);
+                        logMessage(message, LOG_TYPE.ERROR, true);
                         throw new CannotEditException(message);
                     }
-                    LogMessage("Successfully deleted file " + directory + "\\" + file, LOG_TYPE.INFO, true);
+                    logMessage("Successfully deleted file " + directory + "\\" + file, LOG_TYPE.INFO, true);
                 } else {
-                    LogMessage("File " + directory + "\\" + file + " is in do not delete list. It has not been deleted", LOG_TYPE.INFO, true);
+                    logMessage("File " + directory + "\\" + file + " is in do not delete list. It has not been deleted", LOG_TYPE.INFO, true);
                 }
             }
         } catch(CannotEditException | IOException e) {
-            LogMessage("Failed to delete all requested files in directory " + directory, LOG_TYPE.ERROR, true);
-            LogMessage(e.getMessage(), LOG_TYPE.ERROR, true);
+            logMessage("Failed to delete all requested files in directory " + directory, LOG_TYPE.ERROR, true);
+            logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
         }
     }
     
-    public List<String> GetFileList(String directory) throws IOException, CannotEditException {
+    public List<String> directoryFileList(String directory) throws IOException, CannotEditException {
         try{
-            LogMessage("Attempting to get list of files in directory " + directory, LOG_TYPE.INFO, true);
+            logMessage("Attempting to get list of files in directory " + directory, LOG_TYPE.INFO, true);
             String command = "dir /b /a-d \"" + directory + "\"";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);	
@@ -1270,23 +1251,23 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
             }
             if(error.compareTo("") != 0) {
                 String message = "Unable to get list of files in diectory " + directory + ". Error is: " + error;
-                LogMessage(message, LOG_TYPE.ERROR, true);
+                logMessage(message, LOG_TYPE.ERROR, true);
                 throw new CannotEditException(message);
             } else {
-                LogMessage("Successfully got list of files in directory " + directory, LOG_TYPE.INFO, true);
+                logMessage("Successfully got list of files in directory " + directory, LOG_TYPE.INFO, true);
                 return files;
             }
         } catch(CannotEditException | IOException e) {
-            LogMessage("Could not get list of files in directory " + directory, LOG_TYPE.ERROR, true);
-            LogMessage(e.getMessage(), LOG_TYPE.ERROR, true);
+            logMessage("Could not get list of files in directory " + directory, LOG_TYPE.ERROR, true);
+            logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
         }
     }
     
     
-    public void DeleteFile(String full_file_name) throws IOException, CannotEditException {
+    public void fileDelete(String full_file_name) throws IOException, CannotEditException {
         try{
-            LogMessage("Attempting to delete file " + full_file_name, LOG_TYPE.INFO, true);
+            logMessage("Attempting to delete file " + full_file_name, LOG_TYPE.INFO, true);
             String command = "del \"" + full_file_name + "\"";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);	
@@ -1299,20 +1280,20 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
             }
             if(error.compareTo("") != 0) {
                 String message = "Unable to delete file " + full_file_name + ". Error is: " + error;
-                LogMessage(message, LOG_TYPE.ERROR, true);
+                logMessage(message, LOG_TYPE.ERROR, true);
                 throw new CannotEditException(message);
             }
-            LogMessage("Successfully deleted file " + full_file_name, LOG_TYPE.INFO, true);
+            logMessage("Successfully deleted file " + full_file_name, LOG_TYPE.INFO, true);
         } catch(CannotEditException | IOException e) {
-            LogMessage("Could not delete file " + full_file_name, LOG_TYPE.ERROR, true);
-            LogMessage(e.getMessage(), LOG_TYPE.ERROR, true);
+            logMessage("Could not delete file " + full_file_name, LOG_TYPE.ERROR, true);
+            logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
         }
     }
 
-    public void CopyFile(String old_full_file_name, String new_directory) throws IOException, CannotEditException {
+    public void fileCopy(String old_full_file_name, String new_directory) throws IOException, CannotEditException {
         try{
-            LogMessage("Attempting to copy file " + old_full_file_name + " to new directory " + new_directory, LOG_TYPE.INFO, true);
+            logMessage("Attempting to copy file " + old_full_file_name + " to new directory " + new_directory, LOG_TYPE.INFO, true);
             String command = "copy \"" + old_full_file_name + "\" \"" + new_directory + "\"";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);	
@@ -1325,20 +1306,20 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
             }
             if(!error.contains("file(s) copied")) {
                 String message = "Unable to copy file " + old_full_file_name + " to folder " + new_directory + ". Error is: " + error;
-                LogMessage(message, LOG_TYPE.ERROR, true);
+                logMessage(message, LOG_TYPE.ERROR, true);
                 throw new CannotEditException(message);
             }
-            LogMessage("Successfully copied file " + old_full_file_name + " to new directory " + new_directory, LOG_TYPE.INFO, true);
+            logMessage("Successfully copied file " + old_full_file_name + " to new directory " + new_directory, LOG_TYPE.INFO, true);
         } catch(CannotEditException | IOException e) {
-            LogMessage("Could not copy file " + old_full_file_name + " to new directory " + new_directory, LOG_TYPE.ERROR, true);
-            LogMessage(e.getMessage(), LOG_TYPE.ERROR, true);
+            logMessage("Could not copy file " + old_full_file_name + " to new directory " + new_directory, LOG_TYPE.ERROR, true);
+            logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
         }
     }
 
-    public void BackupRegistry(String computer, String reg_key, String full_file_name) throws IOException, CannotEditException, InterruptedException {
+    public void registryBackup(String computer, String reg_key, String full_file_name) throws IOException, CannotEditException, InterruptedException {
         try{
-            LogMessage("Attempting to backup registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name, LOG_TYPE.INFO, true);
+            logMessage("Attempting to backup registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name, LOG_TYPE.INFO, true);
             String command = ".\\pstools\\psexec \\\\" + computer + " REG EXPORT \"" + reg_key + "\" \"" + full_file_name + "\" /y";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);	
@@ -1356,34 +1337,34 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
             cmd_process.waitFor();
             if(!error.contains("with error code 0")) {
                 String message = "Could not backup registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name;
-                LogMessage(message, LOG_TYPE.ERROR, true);
+                logMessage(message, LOG_TYPE.ERROR, true);
                 throw new CannotEditException(message);
             }
-            LogMessage("Successfully backed up registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name, LOG_TYPE.INFO, true);
+            logMessage("Successfully backed up registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name, LOG_TYPE.INFO, true);
         } catch(IOException | InterruptedException e) {
-            LogMessage("Could not backup registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name + ". Error is " + e.getMessage(), LOG_TYPE.ERROR, true);
+            logMessage("Could not backup registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name + ". Error is " + e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
         }
     }
 
-    public void DeleteRegistry(String computer, String reg_key) throws IOException, InterruptedException {
+    public void registryDelete(String computer, String reg_key) throws IOException, InterruptedException {
         try{
-            LogMessage("Attempting to delete registry key " + reg_key + " from computer " + computer, LOG_TYPE.INFO, true);
+            logMessage("Attempting to delete registry key " + reg_key + " from computer " + computer, LOG_TYPE.INFO, true);
             String command = ".\\pstools\\psexec \\\\" + computer + " REG DELETE \"" + reg_key + "\" /f";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);	
             Process cmd_process = builder.start();
             cmd_process.waitFor();
-            LogMessage("Successfully deleted registry key " + reg_key + " from computer " + computer, LOG_TYPE.INFO, true);
+            logMessage("Successfully deleted registry key " + reg_key + " from computer " + computer, LOG_TYPE.INFO, true);
         } catch(IOException | InterruptedException e) {
-            LogMessage("Could not delete registry key " + reg_key + " from computer " + computer, LOG_TYPE.ERROR, true);
-            LogMessage(e.getMessage(), LOG_TYPE.ERROR, true);
+            logMessage("Could not delete registry key " + reg_key + " from computer " + computer, LOG_TYPE.ERROR, true);
+            logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
         }
     }
 
-    public String PrintDirectory() {
-        LogMessage("Compiling directory list into readable String", LOG_TYPE.INFO, true, false);
+    public String printUserList() {
+        logMessage("Compiling user list into readable String", LOG_TYPE.INFO, true, false);
         String output = "";
         Double total_size = 0.0;
         output += UserData.HeadingsToString();
@@ -1403,31 +1384,31 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
             Double size_in_megabytes = total_size / (1024.0 * 1024.0);
             output += '\n' + "Total size:" + '\t' + (size_in_megabytes + " MB"); 
         }
-        LogMessage("Successfully compiled directory list into readable String", LOG_TYPE.INFO, true, false);
+        logMessage("Successfully compiled user list into readable String", LOG_TYPE.INFO, true, false);
         return output;
     }
 
-    public String GenerateDateString() {
-        String output = GenerateDateString("");
+    public String generateDateString() {
+        String output = generateDateString("");
         return output;
     }
 
-    public String GenerateDateString(String prefix) {
-        LogMessage("Generating date/time String with prefix " + prefix, LOG_TYPE.INFO, true, false);
+    public String generateDateString(String prefix) {
+        logMessage("Generating date/time String with prefix " + prefix, LOG_TYPE.INFO, true, false);
         TimeZone timezone = TimeZone.getTimeZone("UTC");
         Calendar calendar = Calendar.getInstance();
         SimpleDateFormat filename_utc = new SimpleDateFormat("yyMMddHHmmss");
         String current_date = filename_utc.format(calendar.getTime());
-        LogMessage("Generated date/time String " + prefix + current_date, LOG_TYPE.INFO, true, false);
+        logMessage("Generated date/time String " + prefix + current_date, LOG_TYPE.INFO, true, false);
         return prefix + current_date;
     }
 
-    public String LogMessage(String message, LOG_TYPE state, boolean include_timestamp) {
-        String log_message = LogMessage(message, state, include_timestamp, true);
+    public String logMessage(String message, LOG_TYPE state, boolean include_timestamp) {
+        String log_message = logMessage(message, state, include_timestamp, true);
         return log_message;
     }
     
-    public String LogMessage(String message, LOG_TYPE state, boolean include_timestamp, boolean display_to_console) {
+    public String logMessage(String message, LOG_TYPE state, boolean include_timestamp, boolean display_to_console) {
             String log_message = "";
             if(null != state) switch (state) {
             case INFO:
@@ -1459,11 +1440,11 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
             return log_message;
     }
 
-    public String WriteLog() throws IOException, NotInitialisedException {
+    public String writeLog() throws IOException, NotInitialisedException {
         if(!log_list.isEmpty()) {
             try {
-                String filename = "logs\\Profile_Deleter_Log_" + GenerateDateString() + ".txt";
-                WriteToFile(filename, log_list);
+                String filename = "logs\\Profile_Deleter_Log_" + generateDateString() + ".txt";
+                writeToFile(filename, log_list);
                 return filename;
             } catch(IOException e) {
                 throw e;
@@ -1474,7 +1455,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
 
     //Read from file function
-    private List<String> ReadFromFile(String filename) throws IOException {
+    private List<String> readFromFile(String filename) throws IOException {
         List<String> read_data = new ArrayList<String>();
         try {
                 File file = new File(filename);
@@ -1489,7 +1470,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         return read_data;
     }
 
-    private void WriteToFile(String filename, List<String> write_to_file) throws IOException {
+    private void writeToFile(String filename, List<String> write_to_file) throws IOException {
         try {
             int count = 0;
             File file = new File(filename);
@@ -1516,7 +1497,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
 
     public boolean pingPC(String PC) throws IOException, InterruptedException {
-        LogMessage("Pinging PC " + PC + " to ensure it exists and is reachable on the network", LOG_TYPE.INFO, true);
+        logMessage("Pinging PC " + PC + " to ensure it exists and is reachable on the network", LOG_TYPE.INFO, true);
         boolean pc_online = false;
         try {
             String command = "ping " + PC + " -n 1";
@@ -1539,10 +1520,10 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                 }
             }
         } catch (IOException | InterruptedException e) {
-            LogMessage("Ping check has failed with error " + e.getMessage(), LOG_TYPE.ERROR, true);
+            logMessage("Ping check has failed with error " + e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
         }
-        LogMessage("Ping check has completed successfully, result is " + pc_online, LOG_TYPE.INFO, true);
+        logMessage("Ping check has completed successfully, result is " + pc_online, LOG_TYPE.INFO, true);
         return pc_online;
     }
     
@@ -1553,10 +1534,10 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         TableModel model = (TableModel)e.getSource();
         Object data = model.getValueAt(row, column);
         
-        user_list.get(row).delete = Boolean.parseBoolean(data.toString());
+        user_list.get(row).setDelete(Boolean.parseBoolean(data.toString()));
     }
     
-    private class SetComputerThread extends SwingWorker<Object, Object> {
+    private class setComputerThread extends SwingWorker<Object, Object> {
         boolean ping_success = false;
                 
         @Override
@@ -1566,33 +1547,12 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                 size_check_complete = false;
                 state_check_complete = false;
                 registry_check_complete = false;
-                SetComputer(computer_name_text_field.getText());
-                BuildDirectory();
-                if(size_check) {
-                    CheckSize();
-                }
-                if(state_check) {
-                    CheckState();
-                }
-                if(registry_check) {
-                    GenerateSessionID();
-                    try {
-                        CreateSessionFolders();
-                        try {
-                            BackupAndCopyRegistry();
-                            try {
-                                FindSIDAndGUID();
-                            } catch(IOException | NotInitialisedException e) {
-                            }
-                        } catch(IOException | CannotEditException | NotInitialisedException | InterruptedException e) {
-                            LogMessage("Unable to backup registry files, error is: " + e.getMessage(), LOG_TYPE.ERROR, true);
-                        }
-                    } catch(IOException | CannotEditException | NotInitialisedException e) {
-                    }
-                }
-                UpdateTableData();
+                setComputer(computer_name_text_field.getText());
+                generateUserList();
+                checkAll();
+                updateTableData();
             } else {
-                LogMessage("Unable to ping computer, computer not set", LOG_TYPE.WARNING, true);
+                logMessage("Unable to ping computer, computer not set", LOG_TYPE.WARNING, true);
             }
             return new Object();
         }
@@ -1615,33 +1575,11 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
     
-    private class RerunChecksThread extends SwingWorker<Object, Object> {
+    private class rerunChecksThread extends SwingWorker<Object, Object> {
         @Override
         protected Object doInBackground() throws Exception {
             if(computer != null && !computer.isEmpty()) {
-                if(size_check) {
-                    CheckSize();
-                }
-                if(state_check) {
-                    CheckState();
-                }
-                if(registry_check) {
-                    GenerateSessionID();
-                    try {
-                        CreateSessionFolders();
-                        try {
-                            BackupAndCopyRegistry();
-                            try {
-                                FindSIDAndGUID();
-                            } catch(IOException | NotInitialisedException e) {
-                            }
-                        } catch(IOException | CannotEditException | NotInitialisedException | InterruptedException e) {
-                            LogMessage("Unable to backup registry files, error is: " + e.getMessage(), LOG_TYPE.ERROR, true);
-                        }
-                    } catch(IOException | CannotEditException | NotInitialisedException e) {
-                    }
-                }
-                UpdateTableData();
+                checkAll();
             }
             return new Object();
         }
@@ -1662,13 +1600,13 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
     
-    private class WriteLogThread extends SwingWorker<Object, Object> {
+    private class writeLogThread extends SwingWorker<Object, Object> {
         @Override
         protected Object doInBackground() throws Exception {
             try {
-                LogMessage("Successfully wrote log to file " + WriteLog(), LOG_TYPE.INFO, true);
+                logMessage("Successfully wrote log to file " + writeLog(), LOG_TYPE.INFO, true);
             } catch (IOException | NotInitialisedException e) {
-                LogMessage("Failed to write log to file. Error is " + e.getMessage(), LOG_TYPE.ERROR, true);
+                logMessage("Failed to write log to file. Error is " + e.getMessage(), LOG_TYPE.ERROR, true);
             }
             return new Object();
         }
@@ -1689,20 +1627,20 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
     
-    private class RunDeletionThread extends SwingWorker<Object, Object> {
+    private class runDeletionThread extends SwingWorker<Object, Object> {
         @Override
         protected Object doInBackground() throws Exception {
             try {
-                List<String> deleted_users = ProcessDeletion();
+                List<String> deleted_users = processDeletion();
                 deleted_users.add(0, "Deletion report:");
                 if(deleted_users.size() > 2) {
                     for(String deleted_user : deleted_users) {
                         system_console_text_area.append('\n' + deleted_user);
                     }
-                    String suffix = GenerateDateString();
-                    WriteToFile("reports\\" + computer + "_deletion_report_" + suffix + ".txt", deleted_users);
-                    LogMessage("Deletion report written to file reports\\" + computer + "_deletion_report_" + suffix + ".txt", LOG_TYPE.INFO, true);
-                    UpdateTableData();
+                    String suffix = generateDateString();
+                    writeToFile("reports\\" + computer + "_deletion_report_" + suffix + ".txt", deleted_users);
+                    logMessage("Deletion report written to file reports\\" + computer + "_deletion_report_" + suffix + ".txt", LOG_TYPE.INFO, true);
+                    updateTableData();
                     if(size_check_complete) {
                         double total_size = 0.0;
                         for(UserData user : user_list) {
@@ -1711,7 +1649,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                         setTitle("Profile Deleter - " + computer + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
                     }
                 } else {
-                    LogMessage("Nothing was flagged for deletion", LOG_TYPE.WARNING, true);
+                    logMessage("Nothing was flagged for deletion", LOG_TYPE.WARNING, true);
                 }
             } catch(NotInitialisedException | IOException e) {
             }
