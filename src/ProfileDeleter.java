@@ -47,6 +47,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     private String remote_data_directory;
     private String local_data_directory;
     private List<UserData> user_list;
+    private List<String> cannot_delete_list;
     private List<String> log_list;
     private String session_id;
     private boolean size_check;
@@ -121,6 +122,8 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         local_data_directory = "";
         user_list = new ArrayList<>();
         log_list = new ArrayList<>();
+        cannot_delete_list = new ArrayList<>();
+        cannot_delete_list.add("Public");
         session_id = "";
         size_check = false;
         state_check = true;
@@ -156,7 +159,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                    TableModel model = getModel();
                    String editable = (String)model.getValueAt(realRowIndex, 4);
                    String name = (String)model.getValueAt(realRowIndex, 1);
-                   if(editable.compareTo("Editable") != 0 || name.compareTo("Public") == 0) {
+                   if(editable.compareTo("Editable") != 0 || cannot_delete_list.contains(name)) {
                        tip = "Cannot delete if state is not Editable and cannot delete the Public account";
                    }
                }
@@ -408,6 +411,15 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
 
     /**
+     * Sets the cannot delete list attribute.
+     * 
+     * @param cannot_delete_list list of user account names that are not allowed to be deleted
+     */
+    public void setCannotDeleteList(List<String> cannot_delete_list) {
+        this.cannot_delete_list = cannot_delete_list;
+    }
+
+    /**
      * Gets the value of the computer attribute.
      * 
      * @return the target computer hostname or IP address
@@ -471,12 +483,21 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
 
     /**
-     * Sets the user list attribute.
+     * Gets the user list attribute.
      * 
      * @return list of UserData that contain details for the users on the target computer
      */
     public List<UserData> getUserList() {
         return user_list;
+    }
+
+    /**
+     * Gets the cannot delete list attribute.
+     * 
+     * @return list of user account names that are not allowed to be deleted
+     */
+    public List<String> getCannotDeleteList() {
+        return cannot_delete_list;
     }
 
     /**
@@ -493,11 +514,12 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
     
     /**
-     * Processed local Windows account deletion on target computer.
+     * Process local Windows account deletion on target computer.
      * Before this can be done the user list attribute must be set and state check + registry check must be set to true.
-     * These can be done manually or by running 
+     * These can be done manually or by running the generateUserList function to create the user list and running the checking functions checkState, checkRegistry or checkAll.
+     * A size check does not need to be done to process the deletion, this is an optional check as it can take a very long time to complete.
      * 
-     * @return deletion report of users flagged for deletion
+     * @return deletion deletion report detailing users deleted and any problems deleting the user folder or registry keys
      * @throws NotInitialisedException user list has not been initialised or a state and/or registry check has not been run
      */
     public List<String> processDeletion() throws NotInitialisedException {
@@ -562,6 +584,10 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
     
+    /**
+     * Refreshes the data in the results table JTable.
+     * This needs to be run anytime the user list attribute is changed otherwise the data in the results table will be outdated.
+     */
     public void updateTableData() {
         results_table.getModel().removeTableModelListener(this);
         results_table.setModel(new AbstractTableModel () {
@@ -602,7 +628,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
             public boolean isCellEditable(int row, int col)
             {
                 
-                if(col == 0 && getValueAt(row, 4) == "Editable" && getValueAt(row, 1) != "Public") {
+                if(col == 0 && getValueAt(row, 4) == "Editable" && !cannot_delete_list.contains(getValueAt(row, 1))) {
                     return true;
                 } else {
                     return false;
@@ -620,6 +646,9 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         results_table.getModel().addTableModelListener(this);
     }
     
+    /**
+     * Overridden ActionListener function that runs the relevant functions based on GUI elements pressed.
+     */
     @Override
     public void actionPerformed(ActionEvent e) {
         if ("setComputer" == e.getActionCommand()) {
@@ -641,6 +670,11 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
     
+    
+    /**
+     * Run when set computer button is pressed.
+     * Enables/disables GUI elements as needed and runs the set computer SwingWorker thread.
+     */
     public void setComputerButton() {
         computer_name_text_field.setEnabled(false);
         set_computer_button.setEnabled(false);
@@ -654,6 +688,10 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         (set_computer_thread = new setComputerThread()).execute();
     }
     
+    /**
+     * Run when rerun checks button is pressed.
+     * Enables/disables GUI elements as needed and runs the rerun checks SwingWorker thread.
+     */
     public void rerunChecksButton() {
         computer_name_text_field.setEnabled(false);
         set_computer_button.setEnabled(false);
@@ -667,6 +705,10 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         (rerun_checks_thread = new rerunChecksThread()).execute();
     }
     
+    /**
+     * Run when run deletion button is pressed.
+     * Enables/disables GUI elements as needed and runs the run deletion SwingWorker thread.
+     */
     public void runDeletionButton() {
         computer_name_text_field.setEnabled(false);
         set_computer_button.setEnabled(false);
@@ -679,7 +721,11 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         results_table.setEnabled(false);
         (run_deletion_thread = new runDeletionThread()).execute();
     }
-    
+
+    /**
+     * Run when write log button is pressed.
+     * Enables/disables GUI elements as needed and runs the write log SwingWorker thread.
+     */
     public void writeLogButton() {
         computer_name_text_field.setEnabled(false);
         set_computer_button.setEnabled(false);
@@ -693,22 +739,49 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         (write_log_thread = new writeLogThread()).execute();
     }
     
+    /**
+     * Run when size check checkbox is pressed.
+     * Changes size check attribute to the value of size check checkbox.
+     */
     public void sizeCheckCheckbox() {
         size_check = size_check_checkbox.isSelected();
     }
     
+    /**
+     * Run when state check checkbox is pressed.
+     * Changes state check attribute to the value of state check checkbox.
+     */
     public void stateCheckCheckbox() {
         state_check = state_check_checkbox.isSelected();
     }
     
+    /**
+     * Run when registry check checkbox is pressed.
+     * Changes registry check attribute to the value of registry check checkbox.
+     */
     public void registryCheckCheckbox() {
         registry_check = registry_check_checkbox.isSelected();
     }
     
+    /**
+     * Run when exit button is pressed.
+     * Closes the application.
+     */
     public void exitButton() {
         System.exit(0);
     }
     
+    /**
+     * Backs up ProfileList and ProfileGuid registry keys on the target computer and copies the files to the local computer.
+     * Local data directory and remote data directory attributes need to be initialised before this function can be run.
+     * ProfileList registry key = HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList.
+     * ProfileGuid registry key = HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid.
+     * 
+     * @throws IOException thrown if any IO errors are received running registry backup and file copy commands on target and local computer
+     * @throws InterruptedException thrown if any of the process threads used to run registry backup and file copy commands on the target and local computer become interrupted
+     * @throws CannotEditException unable to create required folders or files on target or local computer
+     * @throws NotInitialisedException local or remote data directory attribute has not been initialised
+     */
     public void backupAndCopyRegistry() throws IOException, InterruptedException, CannotEditException, NotInitialisedException {
         logMessage("Attempting to backup profilelist and profileguid registry keys on remote computer", LOG_TYPE.INFO, true);
         if(local_data_directory.compareTo("") == 0 || remote_data_directory.compareTo("") == 0) {
@@ -723,7 +796,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                 try {
                     registryBackup(computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList", "C:\\temp\\Profile_Deleter\\" + session_id + "\\" + filename_friendly_computer + "_ProfileList.reg");
                     run = false;
-                } catch(IOException | CannotEditException e) {
+                } catch(IOException | InterruptedException | CannotEditException e) {
                     if(count > 29) {
                         throw e;
                     } else {
@@ -738,7 +811,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                 try {
                     registryBackup(computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid", "C:\\temp\\Profile_Deleter\\" + session_id + "\\" + filename_friendly_computer + "_ProfileGuid.reg");
                     run = false;
-                } catch(IOException | CannotEditException e) {
+                } catch(IOException | InterruptedException | CannotEditException e) {
                     if(count > 29) {
                         throw e;
                     } else {
@@ -760,6 +833,14 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
     
+    /**
+     * Processes ProfileSid and ProfileGuid registry data obtained from target computer and assigns the values to the correct user in the user list attribute.
+     * backupAndCopyRegistry function must be run before this function can be run, or the needed .reg files need to be manually created.
+     * Local data directory attribute must be initialised before this function can be run.
+     * 
+     * @throws IOException thrown if IO errors are received when trying to open needed .reg files
+     * @throws NotInitialisedException local data directory attribute has not been initialised
+     */
     public void findSIDAndGUID() throws IOException, NotInitialisedException {
         logMessage("Attempting to compile SID and GUID data from registry backups", LOG_TYPE.INFO, true);
         if(local_data_directory.compareTo("") != 0) {
@@ -907,6 +988,13 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
 
+    /**
+     * Populates the user list attribute with data from the target computers users directory.
+     * Gets the folder name and last updated date for each user.
+     * Sets delete to true unless the folder name is in the cannot delete list.
+     * 
+     * @throws IOException an IO error has occurred when running the powershell script to get the user list on the target computer
+     */
     public void generateUserList() throws IOException {
         logMessage("Attempting to build users directory " + users_directory, LOG_TYPE.INFO, true);
         if(users_directory.compareTo("") != 0) {
@@ -921,13 +1009,13 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                     String line = "";
                     while((line = powershell_process_output_stream.readLine()).compareTo("EndOfScriptGetDirectoryList") != 0) {
                         if(!line.isEmpty()) {
-                                logMessage("Discovered folder details " + line, LOG_TYPE.INFO, true);
-                                String[] line_split = line.split("\\t");
-                                UserData user = new UserData(true, line_split[0], line_split[1], "", "", "", "");
-                                if(line_split[0].compareTo("Public") == 0) {
-                                    user.setDelete(false);
-                                }
-                                user_list.add(user);
+                            logMessage("Discovered folder details " + line, LOG_TYPE.INFO, true);
+                            String[] line_split = line.split("\\t");
+                            UserData user = new UserData(true, line_split[0], line_split[1], "", "", "", "");
+                            if(cannot_delete_list.contains(line_split[0])) {
+                                user.setDelete(false);
+                            }
+                            user_list.add(user);
                         }
                     }
                     powershell_process_output_stream.close();
@@ -944,6 +1032,11 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
 
+    /**
+     * Checks the size of each user folder on the target computer.
+     * This check can take a very long time depending on the size of the users directory on the target computer.
+     * This check is not required to run a deletion.
+     */
     public void checkSize() {
         logMessage("Calcuting size of directory list", LOG_TYPE.INFO, true);
         if(user_list.size() > 0 && users_directory.compareTo("") != 0) {
@@ -962,7 +1055,6 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                 }
                 user_list.get(i).setSize(folder_size);
             }
-            //Double size_in_megabytes = total_size / (1024.0 * 1024.0);
             setTitle("Profile Deleter - " + computer + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
             size_check_complete = true;
             logMessage("Finished calculating size of directory list", LOG_TYPE.INFO, true);
@@ -971,6 +1063,10 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
 
+    /**
+     * Checks the state of each user folder on the target computer to determine if the folder can be edited and therefore deleted.
+     * This check is required before a deletion can be run.
+     */
     public void checkState() throws IOException {
         logMessage("Checking editable state of directory list", LOG_TYPE.INFO, true);
         if(user_list.size() > 0 && users_directory.compareTo("") != 0) {
@@ -999,6 +1095,10 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
 
+    /**
+     * Gets the registry sid and guid data for each user account on the target computer.
+     * This check is required before a deletion can be run.
+     */
     public void checkRegistry() {
         logMessage("Getting registry SID and GUID values for user list", LOG_TYPE.INFO, true);
         generateSessionID();
@@ -1019,6 +1119,10 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
 
+    /**
+     * Runs the size check, state check and registry check if their corresponding boolean attribute is set to true.
+     * Set the corresponding boolean attribute for each check using the setSizeCheck, setStateCheck and setRegistryCheck functions.
+     */
     public void checkAll() {
         if(size_check) {
             checkSize();
@@ -1031,11 +1135,25 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
 
+    /**
+     * Generates a session ID for uniquely naming folders and files related to the particular deletion.
+     * The session ID is generated using the generateDateString function.
+     */
     public void generateSessionID() {
         session_id = generateDateString();
         logMessage("Session ID has been set to " + session_id, LOG_TYPE.INFO, true);
     }
 
+    /**
+     * Creates the neccessary folders for the deletion to run.
+     * Creates a folder on the target computer in C:\temp\Profile_Deleter and a folder on the local computer in the sessions folder.
+     * Session ID attribute must be set. The folders are named using the session ID so that they are unique.
+     * Computer attribute must be set.
+     * 
+     * @throws NotInitialisedException thrown in the session ID or computer attribute are not set
+     * @throws IOException an IO error occurrs when trying to create the needed folders
+     * @throws CannotEditException unable to create the needed folders on the target computer or the local computer
+     */
     public void generateSessionFolders() throws NotInitialisedException, IOException, CannotEditException {
         logMessage("Attempting to create session user_list", LOG_TYPE.INFO, true);
         if(session_id.compareTo("") != 0 && computer.compareTo("") != 0) {
@@ -1078,6 +1196,16 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
 
+    /**
+     * Uses pstools to rename a folder.
+     * 
+     * @param computer the computer the folder is on
+     * @param directory the directory containing the folder to rename
+     * @param folder the name of the folder to rename
+     * @param folder_renamed the name to rename the folder to
+     * @throws IOException an IO error occurrs when trying to rename the folder
+     * @throws CannotEditException unable to rename the folder
+     */
     public void directoryRename(String computer, String directory, String folder, String folder_renamed) throws IOException, CannotEditException {
         try{
             logMessage("Attempting to rename folder " + directory + folder + " to " + folder_renamed , LOG_TYPE.INFO, true);
@@ -1103,10 +1231,19 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
 
-    public String findFolderSize(String folder) throws NonNumericException, IOException {
+    /**
+     * Calculates the filesize of a user folder on the target computer.
+     * Uses powershell script GetFolderSize.ps1.
+     * 
+     * @param user the name of the user folder to calculate the size of on the target computer
+     * @return the size of the folder
+     * @throws NonNumericException the size calculated is not a number
+     * @throws IOException an IO error has occurred when trying to calculate the size of access and run the powershell script
+     */
+    public String findFolderSize(String user) throws NonNumericException, IOException {
         try{
-            logMessage("Calculating filesize for folder " + users_directory + folder, LOG_TYPE.INFO, true);
-            String command = "Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process | powershell.exe -File \".\\src\\GetFolderSize.ps1\" - directory " + users_directory + folder;
+            logMessage("Calculating filesize for folder " + users_directory + user, LOG_TYPE.INFO, true);
+            String command = "Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process | powershell.exe -File \".\\src\\GetFolderSize.ps1\" - directory " + users_directory + user;
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-command", command);
             builder.redirectErrorStream(true);	
             Process power_shell_process = builder.start();
@@ -1121,10 +1258,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
             powershell_process_output_stream.close();
             power_shell_process.destroy();
             if(Pattern.matches("[0-9]+", output)) {
-                /*Long size_in_bytes = Long.parseLong(output);
-                Long size_in_megabytes = size_in_bytes / (1024L * 1024L);
-                return Long.toString(size_in_megabytes) + " MB";*/
-                logMessage("Successfully calculated filesize for folder " + users_directory + folder + ": " + output, LOG_TYPE.INFO, true);
+                logMessage("Successfully calculated filesize for folder " + users_directory + user + ": " + output, LOG_TYPE.INFO, true);
                 return output;
             } else {
                 String message = "Size calculated is not a number. Ensure powershell script .\\src\\GetFolderSize.ps1 is correct";
@@ -1138,6 +1272,14 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
 
+    /**
+     * Creates a folder.
+     * Can be used to create folders on remote computers using \\computername.
+     * 
+     * @param directory the path + name of the folder to create
+     * @throws IOException an IO error has occurred when running process to create the folder
+     * @throws CannotEditException unable to create the folder
+     */
     public void directoryCreate(String directory) throws IOException, CannotEditException {
         try{
             logMessage("Attempting to create folder " + directory, LOG_TYPE.INFO, true);
@@ -1166,6 +1308,14 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
 
+    /**
+     * Deletes a folder.
+     * Can be used to delete folders on remote computers using \\computername.
+     * 
+     * @param directory the path + name of the folder to delete
+     * @throws IOException an IO error has occurred when running process to delete the folder
+     * @throws CannotEditException unable to delete the folder
+     */
     public void directoryDelete(String directory) throws IOException, CannotEditException {
         try{
             logMessage("Attempting to delete folder " + directory, LOG_TYPE.INFO, true);
@@ -1192,7 +1342,17 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
     
-    public void directoryDeleteAllFiles(String directory, List<String> files, List<String> do_not_delete) throws IOException, CannotEditException {
+    /**
+     * Deletes a list of files in a folder.
+     * Can be used to delete files on remote computers using \\computername.
+     * 
+     * @param directory the path + name of the folder to delete the files in
+     * @param files the list of files to delete
+     * @param do_not_delete files to not delete, can be used if the list of files to delete is not filtered previously
+     * @throws IOException an IO error occurred when attempting to delete the files
+     * @throws CannotEditException unable to delete files
+     */
+    public void directoryDeleteFiles(String directory, List<String> files, List<String> do_not_delete) throws IOException, CannotEditException {
         try{
             logMessage("Attempting to delete list of files in directory " + directory, LOG_TYPE.INFO, true);
             for(String file : files) {
@@ -1232,6 +1392,14 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
     
+    /**
+     * Gets a list of files in a folder
+     * 
+     * @param directory the path + folder name of the folder to get the files list from
+     * @return the list of files in the designated folder
+     * @throws IOException an IO error occurred when getting the list of files
+     * @throws CannotEditException unable to read filenames from the designated folder
+     */
     public List<String> directoryFileList(String directory) throws IOException, CannotEditException {
         try{
             logMessage("Attempting to get list of files in directory " + directory, LOG_TYPE.INFO, true);
@@ -1264,7 +1432,13 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
     
-    
+    /**
+     * Delete a single file.
+     * 
+     * @param full_file_name the path + name of the file
+     * @throws IOException an IO error occurred when trying to delete the file
+     * @throws CannotEditException unable to delete the file
+     */
     public void fileDelete(String full_file_name) throws IOException, CannotEditException {
         try{
             logMessage("Attempting to delete file " + full_file_name, LOG_TYPE.INFO, true);
@@ -1291,6 +1465,14 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
 
+    /**
+     * Copies a single file
+     * 
+     * @param old_full_file_name the path + name of the file to copy. Can be copied from a remote computer using \\computername
+     * @param new_directory the folder to copy the file to
+     * @throws IOException an IO error occurred when copying the file
+     * @throws CannotEditException unable to copy the file
+     */
     public void fileCopy(String old_full_file_name, String new_directory) throws IOException, CannotEditException {
         try{
             logMessage("Attempting to copy file " + old_full_file_name + " to new directory " + new_directory, LOG_TYPE.INFO, true);
@@ -1317,6 +1499,16 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
 
+    /**
+     * Creates a registry backup using pstools.
+     * 
+     * @param computer the computer to create the backup on
+     * @param reg_key the registry key to backup
+     * @param full_file_name the path + filename of the backup file to create. Include the file extension
+     * @throws IOException an IO error occurred when backing up the registry or writing the file
+     * @throws CannotEditException unable to access the registry key or unable to create the backup file
+     * @throws InterruptedException the pstools process thread was interrupted
+     */
     public void registryBackup(String computer, String reg_key, String full_file_name) throws IOException, CannotEditException, InterruptedException {
         try{
             logMessage("Attempting to backup registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name, LOG_TYPE.INFO, true);
@@ -1347,6 +1539,14 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
 
+    /**
+     * Deletes a registry key using pstools.
+     * 
+     * @param computer the computer to delete the registry key from
+     * @param reg_key the registry key to delete
+     * @throws IOException an IO error occurred when trying to delete the registry key
+     * @throws InterruptedException the pstools process thread was interrupted
+     */
     public void registryDelete(String computer, String reg_key) throws IOException, InterruptedException {
         try{
             logMessage("Attempting to delete registry key " + reg_key + " from computer " + computer, LOG_TYPE.INFO, true);
@@ -1363,6 +1563,12 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
 
+    /**
+     * Compiles the user list into a single readable String.
+     * The String includes \n and \t characters to aid formatting.
+     * 
+     * @return readable String containing the user list data
+     */
     public String printUserList() {
         logMessage("Compiling user list into readable String", LOG_TYPE.INFO, true, false);
         String output = "";
@@ -1388,11 +1594,23 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         return output;
     }
 
+    /**
+     * Generates a String using the current date/time.
+     * 
+     * @return the generated String based on the current date/time
+     */
     public String generateDateString() {
         String output = generateDateString("");
         return output;
     }
 
+    /**
+     * Generates a String using the current date/time.
+     * Can supply a prefix to add to the front of the generated String.
+     * 
+     * @param prefix the prefix to add to the front of the generated String.
+     * @return the generated String based on the current date/time and prefix supplied
+     */
     public String generateDateString(String prefix) {
         logMessage("Generating date/time String with prefix " + prefix, LOG_TYPE.INFO, true, false);
         TimeZone timezone = TimeZone.getTimeZone("UTC");
@@ -1403,14 +1621,34 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         return prefix + current_date;
     }
 
-    public String logMessage(String message, LOG_TYPE state, boolean include_timestamp) {
-        String log_message = logMessage(message, state, include_timestamp, true);
+    /**
+     * Adds a message to the log.
+     * Requires a severity using the LOG_TYPE enum and can choose to include a timestamp.
+     * 
+     * @param message the message to add to the log
+     * @param severity the severity LOG_TYPE of the message
+     * @param include_timestamp whether to include a timestamp or not
+     * @return the message logged including the severity and timestamp if it was specified
+     */
+    public String logMessage(String message, LOG_TYPE severity, boolean include_timestamp) {
+        String log_message = logMessage(message, severity, include_timestamp, true);
         return log_message;
     }
     
-    public String logMessage(String message, LOG_TYPE state, boolean include_timestamp, boolean display_to_console) {
+    /**
+     * Adds a message to the log.
+     * Requires a severity using the LOG_TYPE enum and can choose to include a timestamp.
+     * Can choose whether to display the logged message on the system console GUI.
+     * 
+     * @param message the message to add to the log
+     * @param severity the severity LOG_TYPE of the message
+     * @param include_timestamp whether to include a timestamp or not
+     * @param display_to_console whether to display the logged message to the system console GUI
+     * @return the message logged including the severity and timestamp if it was specified
+     */
+    public String logMessage(String message, LOG_TYPE severity, boolean include_timestamp, boolean display_to_console) {
             String log_message = "";
-            if(null != state) switch (state) {
+            if(null != severity) switch (severity) {
             case INFO:
                 log_message += "Info: ";
                 break;
@@ -1440,6 +1678,13 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
             return log_message;
     }
 
+    /**
+     * Dumps the list of logged messages to a text file.
+     * 
+     * @return the filename of the created text file
+     * @throws IOException an IO error occurred when trying to create the text file
+     * @throws NotInitialisedException the log list attribute has not had anything logged to it
+     */
     public String writeLog() throws IOException, NotInitialisedException {
         if(!log_list.isEmpty()) {
             try {
@@ -1454,7 +1699,13 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
 
-    //Read from file function
+    /**
+     * Reads all lines in a file and adds the to a String list.
+     * 
+     * @param filename the path + filename of the file to read
+     * @return the contents of the file compiled into a String list
+     * @throws IOException an IO error occurred when trying to read the file
+     */
     private List<String> readFromFile(String filename) throws IOException {
         List<String> read_data = new ArrayList<String>();
         try {
@@ -1470,6 +1721,13 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         return read_data;
     }
 
+    /**
+     * Write all lines in a String list to a file.
+     * 
+     * @param filename the path + filename of the file to write to
+     * @param write_to_file the String list to write to the file
+     * @throws IOException an IO error occurred when trying to write to the file
+     */
     private void writeToFile(String filename, List<String> write_to_file) throws IOException {
         try {
             int count = 0;
@@ -1488,14 +1746,15 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
 
-    public void clearConsole() throws UnrecoverableException{
-            try {
-                    new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
-            } catch(Exception e) {
-                    throw new UnrecoverableException();
-            }
-    }
-
+    /**
+     * Pings a computer to see if it is reachable on the network.
+     * Can be supplied a hostname or IP address.
+     * 
+     * @param PC the hostname or IP address of the computer to ping
+     * @return whether the computer is reachable on the network or not
+     * @throws IOException an IO error occurred when trying to run the process to ping the computer
+     * @throws InterruptedException the cmd process thread was interrupted
+     */
     public boolean pingPC(String PC) throws IOException, InterruptedException {
         logMessage("Pinging PC " + PC + " to ensure it exists and is reachable on the network", LOG_TYPE.INFO, true);
         boolean pc_online = false;
@@ -1527,6 +1786,10 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         return pc_online;
     }
     
+    /**
+     * Overridden from TableModelListener.
+     * Used to track changes to the results table JTable.
+     */
     @Override
     public void tableChanged(TableModelEvent e) {
         int row = e.getFirstRow();
@@ -1537,6 +1800,9 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         user_list.get(row).setDelete(Boolean.parseBoolean(data.toString()));
     }
     
+    /**
+     * SwingWorker thread used to run the setComputer function from the GUI.
+     */
     private class setComputerThread extends SwingWorker<Object, Object> {
         boolean ping_success = false;
                 
@@ -1575,6 +1841,9 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
     
+    /**
+     * SwingWorker thread used to run the checkAll function from the GUI.
+     */
     private class rerunChecksThread extends SwingWorker<Object, Object> {
         @Override
         protected Object doInBackground() throws Exception {
@@ -1600,6 +1869,9 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
     
+    /**
+     * SwingWorker thread used to run the writeLog function from the GUI.
+     */
     private class writeLogThread extends SwingWorker<Object, Object> {
         @Override
         protected Object doInBackground() throws Exception {
@@ -1627,6 +1899,9 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         }
     }
     
+    /**
+     * SwingWorker thread used to run the processDeletion function from the GUI.
+     */
     private class runDeletionThread extends SwingWorker<Object, Object> {
         @Override
         protected Object doInBackground() throws Exception {
