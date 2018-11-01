@@ -211,7 +211,7 @@ public class UserData {
     /**
      * Converts the HEADINGS attribute into a tab delimited String.
      * <p>
-     * Desinged to be used for GUI elements.
+     * Designed to be used for GUI elements.
      *
      * @return the HEADINGS attribute as a tab delimited String
      */

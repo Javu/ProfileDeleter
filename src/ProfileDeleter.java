@@ -698,7 +698,6 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                     } catch (ClassNotFoundException ex) {
                         System.out.println("Couldn't find class");
                         try {
-                            //return getValueAt(0, col).getClass();
                             return Class.forName("java.lang.String");
                         } catch (ClassNotFoundException ex1) {
                             System.out.println("Couldn't find class");
@@ -706,7 +705,6 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                     }
                 } else {
                     try {
-                        //return getValueAt(0, col).getClass();
                         return Class.forName("java.lang.String");
                     } catch (ClassNotFoundException ex) {
                         System.out.println("Couldn't find class");
@@ -1203,12 +1201,18 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         logMessage("Checking editable state of directory list", LOG_TYPE.INFO, true);
         if (user_list.size() > 0 && users_directory.compareTo("") != 0) {
             for (int i = 0; i < user_list.size(); i++) {
-                String folder = user_list.get(i).getName();
-                logMessage("Checking editable state of folder " + folder, LOG_TYPE.INFO, true);
+                String user = user_list.get(i).getName();
+                logMessage("Checking editable state of folder " + user, LOG_TYPE.INFO, true);
                 try {
-                    directoryRename(computer, "C:\\users\\", folder, folder);
-                    user_list.get(i).setState("Editable");
-                    user_list.get(i).setDelete(true);
+                    if(!cannot_delete_list.contains(user)) {
+                        directoryRename(computer, "C:\\users\\", user, user);
+                        user_list.get(i).setState("Editable");
+                        user_list.get(i).setDelete(true);
+                    } else {
+                        user_list.get(i).setState("Uneditable");
+                        user_list.get(i).setDelete(false);
+                        logMessage("User is in the cannot delete list, skipping check for this user", LOG_TYPE.INFO, true);
+                    }
                 } catch (CannotEditException e) {
                     String message = "Uneditable. User may be logged in or PC may need to be restarted";
                     logMessage(message, LOG_TYPE.WARNING, true);
@@ -1264,17 +1268,23 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
      * state of users in user list attribute
      */
     public void checkAll() throws IOException {
+        logMessage("Running all enabled checks", LOG_TYPE.INFO, true);
         if (size_check) {
             checkSize();
+        } else {
+            logMessage("Size check is turned off, skipping size check", LOG_TYPE.INFO, true);
         }
-
         if (state_check) {
             checkState();
+        } else {
+            logMessage("State check is turned off, skipping state check", LOG_TYPE.INFO, true);
         }
-
         if (registry_check) {
             checkRegistry();
+        } else {
+            logMessage("Registry check is turned off, skipping registry check", LOG_TYPE.INFO, true);
         }
+        logMessage("Running enabled checks complete", LOG_TYPE.INFO, true);
     }
 
     /**
@@ -2037,6 +2047,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         protected Object doInBackground() throws Exception {
             if (computer != null && !computer.isEmpty()) {
                 checkAll();
+                updateTableData();
             }
             return new Object();
         }
