@@ -21,6 +21,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -553,10 +555,10 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
      * 
      * @return 2D Object array of the user list attribute
      */
-    public Object[][] convertUserDataTo2DObjectArray() {
+    public Object[][] convertUserListTo2DObjectArray() {
         Object[][] object_array = new Object[user_list.size()][];
         for(int i=0;i<user_list.size();i++) {
-            object_array[i] = user_list.get(i).ToObjectArray();
+            object_array[i] = user_list.get(i).toObjectArray();
         }
         return object_array;
     }
@@ -639,8 +641,8 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     public void updateTableData() {
         results_table.getModel().removeTableModelListener(this);
         results_table.setModel(new AbstractTableModel () {
-            private String[] columnNames = UserData.HeadingsToStringArray();
-            private Object[][] rowData = ConvertFoldersTo2DObjectArray();
+            private String[] columnNames = UserData.headingsToStringArray();
+            private Object[][] rowData = convertUserListTo2DObjectArray();
             
             public String getColumnName(int col) {
                 return columnNames[col].toString();
@@ -897,9 +899,9 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
             String filename_friendly_computer = computer.replace('.', '_');
             try {
                 logMessage("Loading file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg", LOG_TYPE.INFO, true);
-                regkeys_profile_list = r(local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg");
+                regkeys_profile_list = readFromFile(local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg");
                 logMessage("Loading file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg", LOG_TYPE.INFO, true);
-                regkeys_profile_guid = r(local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg");
+                regkeys_profile_guid = readFromFile(local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg");
                 if(regkeys_profile_list != null && !regkeys_profile_list.isEmpty() && regkeys_profile_guid != null && !regkeys_profile_guid.isEmpty()) {
                     logMessage("Cleaning data from file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg", LOG_TYPE.INFO, true);
                     List<String> cleaned_regkeys_profile_list = new ArrayList<String>();
@@ -1170,14 +1172,18 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     /**
      * Runs the size check, state check and registry check if their corresponding boolean attribute is set to true.
      * Set the corresponding boolean attribute for each check using the setSizeCheck, setStateCheck and setRegistryCheck functions.
+     * 
+     * @throws IOException an IO error occurs when trying to check the editable state of users in user list attribute
      */
-    public void checkAll() {
+    public void checkAll() throws IOException {
         if(size_check) {
             checkSize();
         }
+        
         if(state_check) {
             checkState();
         }
+        
         if(registry_check) {
             checkRegistry();
         }
@@ -1193,13 +1199,13 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
     }
 
     /**
-     * Creates the neccessary folders for the deletion to run.
+     * Creates the necessary folders for the deletion to run.
      * Creates a folder on the target computer in C:\temp\Profile_Deleter and a folder on the local computer in the sessions folder.
      * Session ID attribute must be set. The folders are named using the session ID so that they are unique.
      * Computer attribute must be set.
      * 
      * @throws NotInitialisedException thrown in the session ID or computer attribute are not set
-     * @throws IOException an IO error occurrs when trying to create the needed folders
+     * @throws IOException an IO error occurs when trying to create the needed folders
      * @throws CannotEditException unable to create the needed folders on the target computer or the local computer
      */
     public void generateSessionFolders() throws NotInitialisedException, IOException, CannotEditException {
@@ -1251,7 +1257,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
      * @param directory the directory containing the folder to rename
      * @param folder the name of the folder to rename
      * @param folder_renamed the name to rename the folder to
-     * @throws IOException an IO error occurrs when trying to rename the folder
+     * @throws IOException an IO error occurs when trying to rename the folder
      * @throws CannotEditException unable to rename the folder
      */
     public void directoryRename(String computer, String directory, String folder, String folder_renamed) throws IOException, CannotEditException {
@@ -1314,7 +1320,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                 throw new NonNumericException(message);
             }
         } catch(NonNumericException | IOException e) {
-            logMessage("Could not calculate size of folder " + users_directory + folder, LOG_TYPE.ERROR, true);
+            logMessage("Could not calculate size of folder " + users_directory + user, LOG_TYPE.ERROR, true);
             logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
         }
@@ -1621,14 +1627,14 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
         logMessage("Compiling user list into readable String", LOG_TYPE.INFO, true, false);
         String output = "";
         Double total_size = 0.0;
-        output += UserData.HeadingsToString();
+        output += UserData.headingsToString();
         if(user_list.size() > 0) {
             output += '\n';
         }
         for(int i = 0;i < user_list.size();i++) {
-            output += user_list.get(i).ToString();
-            if(Pattern.matches("[-+]?[0-9]*\\.?[0-9]+", user_list.get(i).size)) {
-                total_size += Double.parseDouble(user_list.get(i).size);
+            output += user_list.get(i).toString();
+            if(Pattern.matches("[-+]?[0-9]*\\.?[0-9]+", user_list.get(i).getSize())) {
+                total_size += Double.parseDouble(user_list.get(i).getSize());
             }
             if(i != user_list.size()-1) {
                 output += '\n';
@@ -1967,7 +1973,7 @@ public class ProfileDeleter extends JFrame implements TableModelListener, Action
                     if(size_check_complete) {
                         double total_size = 0.0;
                         for(UserData user : user_list) {
-                            total_size += Double.parseDouble(user.size);
+                            total_size += Double.parseDouble(user.getSize());
                         }
                         setTitle("Profile Deleter - " + computer + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
                     }
