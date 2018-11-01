@@ -70,7 +70,6 @@ import javax.swing.table.TableModel;
  * This class automates this process.
  * <p>
  * Contains a full Java Swing GUI for greater usability.
- * <p>
  */
 public class ProfileDeleter extends JFrame implements TableModelListener, ActionListener {
 
