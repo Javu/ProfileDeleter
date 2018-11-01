@@ -1,19 +1,27 @@
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * Essentially a data structure class containing data for a single user account in Windows.
- * Contains the name of the users folder, the last time the folder was updated, the size and editable state of the folder and the SID and GUID value of the corresponding registry keys.
- * Also has an attribute to tell the ProfileDeleter class whether this particular user folder should be deleted.
- * Has some functions for compiling the data into Strings or Object arrays for use with various GUI elements. 
+ * Essentially a data structure class containing data for a single user account
+ * in Windows.
+ * <p>
+ * Contains the name of the users folder, the last time the folder was updated,
+ * the size and editable state of the folder and the SID and GUID value of the
+ * corresponding registry keys.<br>
+ * Also has an attribute to tell the ProfileDeleter class whether this
+ * particular user folder should be deleted.<br>
+ * Has some functions for compiling the data into Strings or Object arrays for
+ * use with various GUI elements.
  */
 public class UserData {
+
     /**
      * Heading names for use in GUI elements.
      */
     public static final List<String> HEADINGS = Arrays.asList("Delete?", "Name", "Last Updated", "Size", "State", "SID", "GUID");
-    
+
     /**
      * Class attributes.
      */
@@ -24,7 +32,7 @@ public class UserData {
     private String state;
     private String sid;
     private String guid;
-    
+
     /**
      * Constructor for UserData class.
      */
@@ -37,10 +45,10 @@ public class UserData {
         sid = "";
         guid = "";
     }
-    
+
     /**
      * Constructor for UserData class with values for initialisation.
-     * 
+     *
      * @param delete whether the user should be flagged for deletion
      * @param name the username of the user
      * @param last_updated the last time the users folder in Windows was updated
@@ -61,7 +69,7 @@ public class UserData {
 
     /**
      * Sets the delete attribute
-     * 
+     *
      * @param delete whether the user should be flagged for deletion
      */
     public void setDelete(boolean delete) {
@@ -70,7 +78,7 @@ public class UserData {
 
     /**
      * Sets the name attribute
-     * 
+     *
      * @param name the username of the user
      */
     public void setName(String name) {
@@ -79,7 +87,7 @@ public class UserData {
 
     /**
      * Sets the last updated attribute
-     * 
+     *
      * @param last_updated the last time the users folder in Windows was updated
      */
     public void setLastUpdated(String last_updated) {
@@ -88,7 +96,7 @@ public class UserData {
 
     /**
      * Sets the size attribute
-     * 
+     *
      * @param size the size of the users folder in Windows
      */
     public void setSize(String size) {
@@ -97,7 +105,7 @@ public class UserData {
 
     /**
      * Sets the state attribute
-     * 
+     *
      * @param state whether the users folder in Windows can be edited
      */
     public void setState(String state) {
@@ -106,7 +114,7 @@ public class UserData {
 
     /**
      * Sets the sid attribute
-     * 
+     *
      * @param sid the ProfileList SID value for the user in the registry
      */
     public void setSid(String sid) {
@@ -115,7 +123,7 @@ public class UserData {
 
     /**
      * Sets the guid attribute
-     * 
+     *
      * @param guid the ProfileGuid GUID value for the user in the registry
      */
     public void setGuid(String guid) {
@@ -124,7 +132,7 @@ public class UserData {
 
     /**
      * Gets the delete attribute
-     * 
+     *
      * @return whether the user should be flagged for deletion
      */
     public boolean getDelete() {
@@ -133,7 +141,7 @@ public class UserData {
 
     /**
      * Gets the name attribute
-     * 
+     *
      * @return the username of the user
      */
     public String getName() {
@@ -142,7 +150,7 @@ public class UserData {
 
     /**
      * Gets the last updated attribute
-     * 
+     *
      * @return the last time the users folder in Windows was updated
      */
     public String getLastUpdated() {
@@ -151,7 +159,7 @@ public class UserData {
 
     /**
      * Gets the size attribute
-     * 
+     *
      * @return the size of the users folder in Windows
      */
     public String getSize() {
@@ -160,7 +168,7 @@ public class UserData {
 
     /**
      * Gets the state attribute
-     * 
+     *
      * @return whether the users folder in Windows can be edited
      */
     public String getState() {
@@ -169,7 +177,7 @@ public class UserData {
 
     /**
      * Gets the sid attribute
-     * 
+     *
      * @return the ProfileList SID value for the user in the registry
      */
     public String getSid() {
@@ -178,7 +186,7 @@ public class UserData {
 
     /**
      * Gets the guid attribute
-     * 
+     *
      * @return the ProfileGuid GUID value for the user in the registry
      */
     public String getGuid() {
@@ -187,67 +195,71 @@ public class UserData {
 
     /**
      * Converts the HEADINGS attribute into a String array.
+     * <p>
      * Designed to be used for GUI elements.
-     * 
+     *
      * @return the HEADINGS attribute as a String array
      */
     public static String[] headingsToStringArray() {
         String[] string_array = new String[HEADINGS.size()];
-        for(int i=0;i<HEADINGS.size();i++) {
+        for (int i = 0; i < HEADINGS.size(); i++) {
             string_array[i] = HEADINGS.get(i);
         }
         return string_array;
     }
-    
+
     /**
      * Converts the HEADINGS attribute into a tab delimited String.
+     * <p>
      * Desinged to be used for GUI elements.
-     * 
+     *
      * @return the HEADINGS attribute as a tab delimited String
      */
     public static String headingsToString() {
         String output = "";
-        for(int i = 0;i < HEADINGS.size();i++) {
+        for (int i = 0; i < HEADINGS.size(); i++) {
             output += HEADINGS.get(i);
-            if(i != HEADINGS.size()-1) {
+            if (i != HEADINGS.size() - 1) {
                 output += '\t';
             }
         }
         return output;
     }
-    
+
     /**
      * Converts the attributes of the UserData to an Object array.
+     * <p>
      * Designed to be used for GUI elements.
-     * 
+     *
      * @return the attribute of the UserData as an Object array
      */
     public Object[] toObjectArray() {
         Object[] object_array = {delete, name, last_updated, size, state, sid, guid};
         return object_array;
     }
-    
+
     /**
      * Converts the attributes of the UserData into a tab delimited String.
+     * <p>
      * Designed to be used for GUI elements.
-     * 
+     *
      * @return the attribute of the UserData as a tab delimited String
      */
     public String toString() {
         String output = "";
-        if(delete) {
+        if (delete) {
             output += "Yes" + '\t';
         } else {
             output += "No" + '\t';
         }
         output += name + '\t';
         output += last_updated + '\t';
-        if(Pattern.matches("[-+]?[0-9]*\\.?[0-9]+", size)) {
+        if (Pattern.matches("[-+]?[0-9]*\\.?[0-9]+", size)) {
             Double size_in_bytes = Double.parseDouble(size);
             Double size_in_megabytes = size_in_bytes / (1024.0 * 1024.0);
             output += (size_in_megabytes + " MB") + '\t';
         } else {
-            if(size.compareTo("") != 0) {
+            if (size.compareTo("") != 0) {
                 output += "Could not calculate size" + '\t';
             }
         }

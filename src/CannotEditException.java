@@ -1,14 +1,15 @@
+
 /**
- * Exception for use with ProfileDeleter.
+ * Exception for use with ProfileDeleter.<br>
  * To be used when a folder, file or registry value in Windows cannot be edited.
  */
 class CannotEditException extends Exception {
 
     public CannotEditException() {
     }
-    
+
     public CannotEditException(String message) {
         super(message);
     }
-      
+
 }
