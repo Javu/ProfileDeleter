@@ -1599,7 +1599,7 @@ public class ProfileDeleter {
             logMessage("Ping check has failed with error " + e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
         }
-        logMessage("Ping check has completed successfully, result is " + pc_online, LOG_TYPE.INFO, true);
+        logMessage("Ping check has completed, result is " + pc_online, LOG_TYPE.INFO, true);
         return pc_online;
     }
 }
