@@ -29,11 +29,14 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableModel;
 
-
+/**
+ * Implementation of a Swing GUI for the ProfileDeleter class.
+ */
 public class ProfileDeleterGUI extends JFrame implements TableModelListener, ActionListener {
-    
+
+    // The ProfileDeleter class that handles all the logic of the application.
     private ProfileDeleter profile_deleter;
-    
+
     /**
      * Swing GUI elements.
      */
@@ -70,20 +73,21 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     private rerunChecksThread rerun_checks_thread;
     private runDeletionThread run_deletion_thread;
     private writeLogThread write_log_thread;
-    
-        public static void main(String args[]) {
+
+    public static void main(String args[]) {
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
-                new ProfileDeleter();
+                new ProfileDeleterGUI();
             }
         });
     }
-        
+
     public ProfileDeleterGUI() {
         super("Profile Deleter");
 
-        profile_deleter = new ProfileDeleter();
-        
+        // The ProfileDeleter class that handles all the logic of the application.
+        profile_deleter = new ProfileDeleter(this);
+
         // Configurations for the top level JFrame of the GUI.
         setMinimumSize(new Dimension(950, 600));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -293,7 +297,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         pack();
         setVisible(true);
     }
-    
+
     /**
      * Refreshes the data in the results table JTable.
      * <p>
@@ -345,7 +349,6 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             }
 
             public boolean isCellEditable(int row, int col) {
-
                 if (col == 0 && getValueAt(row, 4) == "Editable" && !profile_deleter.getCannotDeleteList().contains(getValueAt(row, 1))) {
                     return true;
                 } else {
@@ -365,14 +368,16 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         results_table.setAutoCreateRowSorter(true);
         results_table.getModel().addTableModelListener(this);
     }
-    
+
     /**
      * Overridden ActionListener function that runs the relevant functions based
      * on GUI elements pressed.
      */
     @Override
     public void actionPerformed(ActionEvent e) {
-        if ("setComputer" == e.getActionCommand()) {
+        if ("LogWritten" == e.getActionCommand()) {
+            writeLogToSystemConsole();
+        } else if ("setComputer" == e.getActionCommand()) {
             setComputerButton();
         } else if ("RerunChecks" == e.getActionCommand()) {
             rerunChecksButton();
@@ -502,7 +507,14 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     private void exitButton() {
         System.exit(0);
     }
-    
+
+    /**
+     * Appends log to system console when ProfileDeleter log is updated.
+     */
+    private void writeLogToSystemConsole() {
+        system_console_text_area.append('\n' + profile_deleter.getLogList().get(profile_deleter.getLogList().size() - 1));
+    }
+
     /**
      * Overridden from TableModelListener.
      * <p>
@@ -535,9 +547,9 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 profile_deleter.setComputer(computer_name_text_field.getText());
                 profile_deleter.generateUserList();
                 profile_deleter.checkAll();
-                if(profile_deleter.getSizeCheckComplete()) {
+                if (profile_deleter.getSizeCheckComplete()) {
                     double total_size = 0.0;
-                    for(UserData user : profile_deleter.getUserList()) {
+                    for (UserData user : profile_deleter.getUserList()) {
                         total_size += Double.parseDouble(user.getSize());
                     }
                     setTitle("Profile Deleter - " + profile_deleter.getComputer() + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
@@ -578,9 +590,9 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         protected Object doInBackground() throws Exception {
             if (profile_deleter.getComputer() != null && !profile_deleter.getComputer().isEmpty()) {
                 profile_deleter.checkAll();
-                if(profile_deleter.getSizeCheckComplete()) {
+                if (profile_deleter.getSizeCheckComplete()) {
                     double total_size = 0.0;
-                    for(UserData user : profile_deleter.getUserList()) {
+                    for (UserData user : profile_deleter.getUserList()) {
                         total_size += Double.parseDouble(user.getSize());
                     }
                     setTitle("Profile Deleter - " + profile_deleter.getComputer() + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");

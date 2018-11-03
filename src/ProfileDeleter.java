@@ -1,14 +1,5 @@
 
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
-import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.AdjustmentEvent;
-import java.awt.event.AdjustmentListener;
-import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -23,23 +14,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
 import java.util.regex.Pattern;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
-import javax.swing.JFrame;
-import javax.swing.JScrollPane;
-import javax.swing.JTable;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.ScrollPaneConstants;
-import javax.swing.SwingUtilities;
-import javax.swing.SwingWorker;
-import javax.swing.border.LineBorder;
-import javax.swing.event.TableModelEvent;
-import javax.swing.event.TableModelListener;
-import javax.swing.table.AbstractTableModel;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.JTableHeader;
-import javax.swing.table.TableModel;
 
 /**
  * Class with functionality to delete user profile folders from a computer
@@ -69,7 +43,10 @@ import javax.swing.table.TableModel;
  * consuming.<br>
  * This class automates this process.
  * <p>
- * Contains a full Java Swing GUI for greater usability.
+ * Can set an ActionListener on the class if creating a GUI that displays the
+ * ProfileDeleter's log. ProfileDeleter will trigger a "LogWritten" ActionEvent
+ * on the ActionListener to notify the ActionListener that the log has been
+ * updated.
  */
 public class ProfileDeleter {
 
@@ -90,6 +67,7 @@ public class ProfileDeleter {
     private boolean size_check_complete;
     private boolean state_check_complete;
     private boolean registry_check_complete;
+    private ActionListener log_updated;
 
     /**
      * Severity level for logged messages.
@@ -114,6 +92,23 @@ public class ProfileDeleter {
      * Constructor for ProfileDeleter class.
      */
     public ProfileDeleter() {
+        this(null);
+    }
+
+    /**
+     * Constructor for ProfileDeleter class that allows an ActionListener to be
+     * specified.
+     * <p>
+     * When the log list attribute is updated ProfileDeleter will trigger a
+     * "LogWritten" ActionEvent on the ActionListener to notify it that the log
+     * has been updated.<br>
+     * This is intended to allow GUI classes to update any UI elements that
+     * display the log.
+     *
+     * @param log_updated the ActonListener to notify that the log has been
+     * updated
+     */
+    public ProfileDeleter(ActionListener log_updated) {
         computer = "";
         users_directory = "";
         remote_data_directory = "";
@@ -129,6 +124,7 @@ public class ProfileDeleter {
         size_check_complete = false;
         state_check_complete = false;
         registry_check_complete = false;
+        this.log_updated = log_updated;
     }
 
     /**
@@ -246,7 +242,7 @@ public class ProfileDeleter {
         this.registry_check_complete = registry_check_complete;
         logMessage("Registry check complete set to " + registry_check_complete, LOG_TYPE.INFO, true);
     }
-    
+
     /**
      * Sets the user list attribute.
      *
@@ -265,6 +261,24 @@ public class ProfileDeleter {
      */
     public void setCannotDeleteList(List<String> cannot_delete_list) {
         this.cannot_delete_list = cannot_delete_list;
+    }
+
+    /**
+     * Sets the log list attribute.
+     *
+     * @param log_list list of logged events
+     */
+    public void setLogList(List<String> log_list) {
+        this.log_list = log_list;
+    }
+    
+    /**
+     * Sets the log updated attribute.
+     *
+     * @param log_updated the ActionListener to notify when the log is updated
+     */
+    public void setLogUpdatedActionListener(ActionListener log_updated) {
+        this.log_updated = log_updated;
     }
 
     /**
@@ -331,7 +345,7 @@ public class ProfileDeleter {
     public boolean getRegistryCheck() {
         return registry_check;
     }
-    
+
     /**
      * Gets the size check complete attribute.
      *
@@ -376,6 +390,24 @@ public class ProfileDeleter {
      */
     public List<String> getCannotDeleteList() {
         return cannot_delete_list;
+    }
+
+    /**
+     * Gets the log list attribute.
+     *
+     * @return list of logged events
+     */
+    public List<String> getLogList() {
+        return log_list;
+    }
+    
+    /**
+     * Gets the log updated attribute.
+     *
+     * @return the ActionListener to notify when the log is updated
+     */
+    public ActionListener getLogUpdatedActionListener() {
+        return log_updated;
     }
 
     /**
@@ -798,7 +830,7 @@ public class ProfileDeleter {
                 String user = user_list.get(i).getName();
                 logMessage("Checking editable state of folder " + user, LOG_TYPE.INFO, true);
                 try {
-                    if(!cannot_delete_list.contains(user)) {
+                    if (!cannot_delete_list.contains(user)) {
                         directoryRename(computer, "C:\\users\\", user, user);
                         user_list.get(i).setState("Editable");
                         user_list.get(i).setDelete(true);
@@ -1405,12 +1437,9 @@ public class ProfileDeleter {
      * @param message the message to add to the log
      * @param severity the severity LOG_TYPE of the message
      * @param include_timestamp whether to include a timestamp or not
-     * @return the message logged including the severity and timestamp if it was
-     * specified
      */
-    public String logMessage(String message, LOG_TYPE severity, boolean include_timestamp) {
-        String log_message = logMessage(message, severity, include_timestamp, true);
-        return log_message;
+    public void logMessage(String message, LOG_TYPE severity, boolean include_timestamp) {
+        logMessage(message, severity, include_timestamp, true);
     }
 
     /**
@@ -1418,18 +1447,18 @@ public class ProfileDeleter {
      * <p>
      * Requires a severity using the LOG_TYPE enum and can choose to include a
      * timestamp.<br>
-     * Can choose whether to display the logged message on the system console
-     * GUI.
+     * If an ActionListener has been specified on the ProfileDeleter class it
+     * will trigger a "LogWritten" ActionEvent on the ActionListener. This is
+     * intended to allow any GUI classes to update any elements used to display
+     * the log as it is updated.
      *
      * @param message the message to add to the log
      * @param severity the severity LOG_TYPE of the message
      * @param include_timestamp whether to include a timestamp or not
-     * @param display_to_console whether to display the logged message to the
-     * system console GUI
-     * @return the message logged including the severity and timestamp if it was
-     * specified
+     * @param display_to_gui triggers a "LogWritten" action event if an
+     * ActionListener has been specified on the ProfileDeleter class
      */
-    public String logMessage(String message, LOG_TYPE severity, boolean include_timestamp, boolean display_to_console) {
+    public void logMessage(String message, LOG_TYPE severity, boolean include_timestamp, boolean display_to_gui) {
         String log_message = "";
         if (null != severity) {
             switch (severity) {
@@ -1457,11 +1486,9 @@ public class ProfileDeleter {
         log_message += message;
 
         log_list.add(log_message);
-        if (display_to_console) {
-            return log_message;
-            //system_console_text_area.append('\n' + message);
+        if (display_to_gui && log_updated != null) {
+            log_updated.actionPerformed(new java.awt.event.ActionEvent(this, 0, "LogWritten"));
         }
-        return "";
     }
 
     /**
