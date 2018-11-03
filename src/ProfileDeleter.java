@@ -59,6 +59,7 @@ public class ProfileDeleter {
     private String local_data_directory;
     private List<UserData> user_list;
     private List<String> cannot_delete_list;
+    private List<String> should_not_delete_list;
     private List<String> log_list;
     private String session_id;
     private boolean size_check;
@@ -67,6 +68,7 @@ public class ProfileDeleter {
     private boolean size_check_complete;
     private boolean state_check_complete;
     private boolean registry_check_complete;
+    private boolean delete_all_users;
     private ActionListener log_updated;
 
     /**
@@ -117,6 +119,9 @@ public class ProfileDeleter {
         log_list = new ArrayList<>();
         cannot_delete_list = new ArrayList<>();
         cannot_delete_list.add("public");
+        should_not_delete_list = new ArrayList<>();
+        should_not_delete_list.add("administrator");
+        should_not_delete_list.add("intranet");
         session_id = "";
         size_check = false;
         state_check = true;
@@ -124,6 +129,7 @@ public class ProfileDeleter {
         size_check_complete = false;
         state_check_complete = false;
         registry_check_complete = false;
+        delete_all_users = true;
         this.log_updated = log_updated;
     }
 
@@ -244,6 +250,25 @@ public class ProfileDeleter {
     }
 
     /**
+     * Sets the delete all users attribute.
+     * <p>
+     * Whether all users should be flagged for deletion or not.
+     *
+     * @param delete_all_users Whether to flag all users for deletion
+     */
+    public void setDeleteAllUsers(boolean delete_all_users) {
+        this.delete_all_users = delete_all_users;
+        if (user_list != null && !user_list.isEmpty() && state_check_complete) {
+            for (UserData user : user_list) {
+                if (!cannot_delete_list.contains(user.getName().toLowerCase()) && !should_not_delete_list.contains(user.getName().toLowerCase()) && user.getState() == "Editable") {
+                    user.setDelete(this.delete_all_users);
+                }
+            }
+        }
+        logMessage("Delete all users set to " + delete_all_users, LOG_TYPE.INFO, true);
+    }
+
+    /**
      * Sets the user list attribute.
      *
      * @param user_list list of UserData that contain details for the users on
@@ -255,12 +280,28 @@ public class ProfileDeleter {
 
     /**
      * Sets the cannot delete list attribute.
+     * <p>
+     * The users in this list cannot be deleted, regardless of their editable
+     * state.
      *
      * @param cannot_delete_list list of user account names that are not allowed
      * to be deleted
      */
     public void setCannotDeleteList(List<String> cannot_delete_list) {
         this.cannot_delete_list = cannot_delete_list;
+    }
+
+    /**
+     * Sets the should not delete list attribute.
+     * <p>
+     * The users in this list will never be automatically flagged for deletion,
+     * they must be manually flagged.
+     *
+     * @param should_not_delete_list list of user account names that are
+     * recommended to not delete
+     */
+    public void setShouldNotDeleteList(List<String> should_not_delete_list) {
+        this.should_not_delete_list = should_not_delete_list;
     }
 
     /**
@@ -271,7 +312,7 @@ public class ProfileDeleter {
     public void setLogList(List<String> log_list) {
         this.log_list = log_list;
     }
-    
+
     /**
      * Sets the log updated attribute.
      *
@@ -374,6 +415,15 @@ public class ProfileDeleter {
     }
 
     /**
+     * Gets the delete all users attribute.
+     *
+     * @return whether to flag all users for deletion
+     */
+    public boolean getDeleteAllUsers() {
+        return delete_all_users;
+    }
+
+    /**
      * Gets the user list attribute.
      *
      * @return list of UserData that contain details for the users on the target
@@ -385,11 +435,26 @@ public class ProfileDeleter {
 
     /**
      * Gets the cannot delete list attribute.
+     * <p>
+     * The users in this list cannot be deleted, regardless of their editable
+     * state.
      *
      * @return list of user account names that are not allowed to be deleted
      */
     public List<String> getCannotDeleteList() {
         return cannot_delete_list;
+    }
+
+    /**
+     * Gets the should not delete list attribute.
+     * <p>
+     * The users in this list will never be automatically flagged for deletion,
+     * they must be manually flagged.
+     *
+     * @return list of user account names that are recommended to not delete
+     */
+    public List<String> getShouldNotDeleteList() {
+        return should_not_delete_list;
     }
 
     /**
@@ -400,7 +465,7 @@ public class ProfileDeleter {
     public List<String> getLogList() {
         return log_list;
     }
-    
+
     /**
      * Gets the log updated attribute.
      *
@@ -493,7 +558,7 @@ public class ProfileDeleter {
                 }
             }
             user_list = new_folders;
-            logMessage("Successfully completed deletions", LOG_TYPE.INFO, true);
+            logMessage("Completed deletions", LOG_TYPE.INFO, true);
             return deleted_folders;
         } else {
             String message = "Either user list has not been initialised or a state and/or registry check has not been run";
@@ -765,9 +830,6 @@ public class ProfileDeleter {
                         logMessage("Discovered folder details " + line, LOG_TYPE.INFO, true);
                         String[] line_split = line.split("\\t");
                         UserData user = new UserData(false, line_split[0], line_split[1], "", "", "", "");
-                        /*if (cannot_delete_list.contains(line_split[0].toLowerCase())) {
-                            user.setDelete(false);
-                        }*/
                         user_list.add(user);
                     }
                 }
@@ -833,7 +895,11 @@ public class ProfileDeleter {
                     if (!cannot_delete_list.contains(user.toLowerCase())) {
                         directoryRename(computer, "C:\\users\\", user, user);
                         user_list.get(i).setState("Editable");
-                        user_list.get(i).setDelete(true);
+                        if (delete_all_users && !should_not_delete_list.contains(user.toLowerCase())) {
+                            user_list.get(i).setDelete(true);
+                        } else {
+                            user_list.get(i).setDelete(false);
+                        }
                     } else {
                         user_list.get(i).setState("Uneditable");
                         user_list.get(i).setDelete(false);
@@ -996,7 +1062,7 @@ public class ProfileDeleter {
     public void directoryRename(String computer, String directory, String folder, String folder_renamed) throws IOException, CannotEditException {
         try {
             logMessage("Attempting to rename folder " + directory + folder + " to " + folder_renamed, LOG_TYPE.INFO, true);
-            String command = ".\\pstools\\psexec \\\\" + computer + " cmd /c REN \"" + directory + folder + "\" \"" + folder_renamed + "\" && echo editable|| echo uneditable";
+            String command = ".\\pstools\\psexec /accepteula \\\\" + computer + " cmd /c REN \"" + directory + folder + "\" \"" + folder_renamed + "\" && echo editable|| echo uneditable";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);
             Process cmd_process = builder.start();
@@ -1315,7 +1381,7 @@ public class ProfileDeleter {
     public void registryBackup(String computer, String reg_key, String full_file_name) throws IOException, CannotEditException, InterruptedException {
         try {
             logMessage("Attempting to backup registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name, LOG_TYPE.INFO, true);
-            String command = ".\\pstools\\psexec \\\\" + computer + " REG EXPORT \"" + reg_key + "\" \"" + full_file_name + "\" /y";
+            String command = ".\\pstools\\psexec /accepteula \\\\" + computer + " REG EXPORT \"" + reg_key + "\" \"" + full_file_name + "\" /y";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);
             Process cmd_process = builder.start();
@@ -1354,7 +1420,7 @@ public class ProfileDeleter {
     public void registryDelete(String computer, String reg_key) throws IOException, InterruptedException {
         try {
             logMessage("Attempting to delete registry key " + reg_key + " from computer " + computer, LOG_TYPE.INFO, true);
-            String command = ".\\pstools\\psexec \\\\" + computer + " REG DELETE \"" + reg_key + "\" /f";
+            String command = ".\\pstools\\psexec /accepteula \\\\" + computer + " REG DELETE \"" + reg_key + "\" /f";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);
             Process cmd_process = builder.start();

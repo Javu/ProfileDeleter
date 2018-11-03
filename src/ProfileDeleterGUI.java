@@ -57,6 +57,8 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     private GridBagConstraints run_deletion_gc;
     private JButton write_log_button;
     private GridBagConstraints write_log_gc;
+    private JButton help_button;
+    private GridBagConstraints help_gc;
     private JButton exit_button;
     private GridBagConstraints exit_gc;
     private JCheckBox size_check_checkbox;
@@ -65,6 +67,8 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     private GridBagConstraints state_check_gc;
     private JCheckBox registry_check_checkbox;
     private GridBagConstraints registry_check_gc;
+    private JCheckBox delete_all_users_checkbox;
+    private GridBagConstraints delete_all_users_gc;
 
     /**
      * SwingWorker threads for GUI.
@@ -89,13 +93,13 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         profile_deleter = new ProfileDeleter(this);
 
         // Configurations for the top level JFrame of the GUI.
-        setMinimumSize(new Dimension(950, 600));
+        setMinimumSize(new Dimension(1050, 600));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         getContentPane().setLayout(new GridBagLayout());
 
         // Column header tooltips in the results table JTable GUI element.
-        String[] columnToolTips = {
-            "Cannot delete if state is not Editable and cannot delete users on the cannot delete list",
+        final String[] columnToolTips = {
+            "Cannot delete if state is not Editable and cannot delete users on the cannot delete list. Users in the should not delete list will not be automatically flagged for deletion and must be flagged for deletion manually",
             null,
             null,
             null,
@@ -120,17 +124,21 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 if (realColumnIndex == 0) {
                     if (profile_deleter.getCannotDeleteList().contains(name.toLowerCase())) {
                         tip = "User is in the cannot delete list, you cannot delete users in this list";
-                    } else if(editable.compareTo("Editable") != 0) {
+                    } else if (editable.compareTo("Uneditable") == 0) {
+                        tip = "Cannot delete if state is not Editable";
+                    } else if (profile_deleter.getShouldNotDeleteList().contains(name.toLowerCase())) {
+                        tip = "User is in the should not delete list. It is recommended you do not delete this account unless it is necessary";
+                    } else if (editable.compareTo("Editable") != 0) {
                         tip = "Cannot delete if state is not Editable";
                     }
-                } else if(realColumnIndex == 1) {
+                } else if (realColumnIndex == 1) {
                     if (profile_deleter.getCannotDeleteList().contains(name.toLowerCase())) {
                         tip = "User is in the cannot delete list, you cannot delete users in this list";
                     }
-                } else if(realColumnIndex == 4) {
+                } else if (realColumnIndex == 4) {
                     if (profile_deleter.getCannotDeleteList().contains(name.toLowerCase())) {
                         tip = "User is in the cannot delete list, you cannot delete users in this list";
-                    } else if(editable.compareTo("Uneditable") == 0) {
+                    } else if (editable.compareTo("Uneditable") == 0) {
                         tip = "User may be logged in or PC may need to be restarted";
                     }
                 }
@@ -262,6 +270,19 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         rerun_checks_gc.gridwidth = 1;
         rerun_checks_gc.gridheight = 1;
 
+        // Initialisation of delete all users checkbox GUI element.
+        delete_all_users_checkbox = new JCheckBox();
+        delete_all_users_checkbox.setSelected(true);
+        delete_all_users_checkbox.setText("Delete All");
+        delete_all_users_checkbox.setActionCommand("DeleteAllUsersToggle");
+        delete_all_users_checkbox.addActionListener(this);
+        delete_all_users_gc = new GridBagConstraints();
+        delete_all_users_gc.fill = GridBagConstraints.BOTH;
+        delete_all_users_gc.gridx = 6;
+        delete_all_users_gc.gridy = 0;
+        delete_all_users_gc.gridwidth = 1;
+        delete_all_users_gc.gridheight = 1;
+
         // Initialisation of run deletion button GUI element.
         run_deletion_button = new JButton("Run Deletion");
         run_deletion_button.setActionCommand("RunDeletion");
@@ -269,7 +290,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         run_deletion_button.setEnabled(false);
         run_deletion_gc = new GridBagConstraints();
         run_deletion_gc.fill = GridBagConstraints.BOTH;
-        run_deletion_gc.gridx = 6;
+        run_deletion_gc.gridx = 7;
         run_deletion_gc.gridy = 0;
         run_deletion_gc.gridwidth = 1;
         run_deletion_gc.gridheight = 1;
@@ -280,10 +301,21 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         write_log_button.addActionListener(this);
         write_log_gc = new GridBagConstraints();
         write_log_gc.fill = GridBagConstraints.BOTH;
-        write_log_gc.gridx = 7;
+        write_log_gc.gridx = 8;
         write_log_gc.gridy = 0;
         write_log_gc.gridwidth = 1;
         write_log_gc.gridheight = 1;
+
+        // Initialisation of help button GUI element.
+        help_button = new JButton("Help");
+        help_button.setActionCommand("Help");
+        help_button.addActionListener(this);
+        help_gc = new GridBagConstraints();
+        help_gc.fill = GridBagConstraints.BOTH;
+        help_gc.gridx = 9;
+        help_gc.gridy = 0;
+        help_gc.gridwidth = 1;
+        help_gc.gridheight = 1;
 
         // Initialisation of exit button GUI element.
         exit_button = new JButton("Exit");
@@ -291,7 +323,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         exit_button.addActionListener(this);
         exit_gc = new GridBagConstraints();
         exit_gc.fill = GridBagConstraints.BOTH;
-        exit_gc.gridx = 8;
+        exit_gc.gridx = 10;
         exit_gc.gridy = 0;
         exit_gc.gridwidth = 1;
         exit_gc.gridheight = 1;
@@ -303,8 +335,10 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         getContentPane().add(state_check_checkbox, state_check_gc);
         getContentPane().add(registry_check_checkbox, registry_check_gc);
         getContentPane().add(rerun_checks_button, rerun_checks_gc);
+        getContentPane().add(delete_all_users_checkbox, delete_all_users_gc);
         getContentPane().add(run_deletion_button, run_deletion_gc);
         getContentPane().add(write_log_button, write_log_gc);
+        getContentPane().add(help_button, help_gc);
         getContentPane().add(exit_button, exit_gc);
         getContentPane().add(results_scroll_pane, results_gc);
         getContentPane().add(system_console_scroll_pane, system_console_gc);
@@ -405,6 +439,10 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             stateCheckCheckbox();
         } else if ("RegistryCheckToggle" == e.getActionCommand()) {
             registryCheckCheckbox();
+        } else if ("DeleteAllUsersToggle" == e.getActionCommand()) {
+            deleteAllUsersCheckbox();
+        } else if ("Help" == e.getActionCommand()) {
+            helpButton();
         } else if ("Exit" == e.getActionCommand()) {
             exitButton();
         }
@@ -423,8 +461,10 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         state_check_checkbox.setEnabled(false);
         registry_check_checkbox.setEnabled(false);
         rerun_checks_button.setEnabled(false);
+        delete_all_users_checkbox.setEnabled(false);
         run_deletion_button.setEnabled(false);
         write_log_button.setEnabled(false);
+        help_button.setEnabled(false);
         results_table.setEnabled(false);
         (set_computer_thread = new setComputerThread()).execute();
     }
@@ -442,8 +482,10 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         state_check_checkbox.setEnabled(false);
         registry_check_checkbox.setEnabled(false);
         rerun_checks_button.setEnabled(false);
+        delete_all_users_checkbox.setEnabled(false);
         run_deletion_button.setEnabled(false);
         write_log_button.setEnabled(false);
+        help_button.setEnabled(false);
         results_table.setEnabled(false);
         (rerun_checks_thread = new rerunChecksThread()).execute();
     }
@@ -461,8 +503,10 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         state_check_checkbox.setEnabled(false);
         registry_check_checkbox.setEnabled(false);
         rerun_checks_button.setEnabled(false);
+        delete_all_users_checkbox.setEnabled(false);
         run_deletion_button.setEnabled(false);
         write_log_button.setEnabled(false);
+        help_button.setEnabled(false);
         results_table.setEnabled(false);
         (run_deletion_thread = new runDeletionThread()).execute();
     }
@@ -480,8 +524,10 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         state_check_checkbox.setEnabled(false);
         registry_check_checkbox.setEnabled(false);
         rerun_checks_button.setEnabled(false);
+        delete_all_users_checkbox.setEnabled(false);
         run_deletion_button.setEnabled(false);
         write_log_button.setEnabled(false);
+        help_button.setEnabled(false);
         results_table.setEnabled(false);
         (write_log_thread = new writeLogThread()).execute();
     }
@@ -511,6 +557,26 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
      */
     private void registryCheckCheckbox() {
         profile_deleter.setRegistryCheck(registry_check_checkbox.isSelected());
+    }
+
+    /**
+     * Run when delete all users checkbox is pressed.
+     * <p>
+     * Changes delete attribute of ProfileDeleter user list to the value of
+     * delete all users checkbox.
+     */
+    private void deleteAllUsersCheckbox() {
+        profile_deleter.setDeleteAllUsers(delete_all_users_checkbox.isSelected());
+        updateTableData();
+    }
+
+    /**
+     * Run when help button is pressed.
+     * <p>
+     * Display help message.
+     */
+    private void helpButton() {
+
     }
 
     /**
@@ -570,7 +636,6 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 } else {
                     setTitle("Profile Deleter - " + profile_deleter.getComputer());
                 }
-                updateTableData();
             } else {
                 profile_deleter.logMessage("Unable to ping computer, computer not set", ProfileDeleter.LOG_TYPE.WARNING, true);
             }
@@ -579,6 +644,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         @Override
         public void done() {
+            updateTableData();
             if (ping_success || (profile_deleter.getComputer() != null && !profile_deleter.getComputer().isEmpty())) {
                 rerun_checks_button.setEnabled(true);
             }
@@ -590,7 +656,9 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             size_check_checkbox.setEnabled(true);
             state_check_checkbox.setEnabled(true);
             registry_check_checkbox.setEnabled(true);
+            delete_all_users_checkbox.setEnabled(true);
             write_log_button.setEnabled(true);
+            help_button.setEnabled(true);
             results_table.setEnabled(true);
         }
     }
@@ -611,13 +679,13 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                     }
                     setTitle("Profile Deleter - " + profile_deleter.getComputer() + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
                 }
-                updateTableData();
             }
             return new Object();
         }
 
         @Override
         public void done() {
+            updateTableData();
             if (profile_deleter.getStateCheckComplete() && profile_deleter.getRegistryCheckComplete()) {
                 run_deletion_button.setEnabled(true);
             }
@@ -627,7 +695,9 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             size_check_checkbox.setEnabled(true);
             state_check_checkbox.setEnabled(true);
             registry_check_checkbox.setEnabled(true);
+            delete_all_users_checkbox.setEnabled(true);
             write_log_button.setEnabled(true);
+            help_button.setEnabled(true);
             results_table.setEnabled(true);
         }
     }
@@ -658,7 +728,9 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             size_check_checkbox.setEnabled(true);
             state_check_checkbox.setEnabled(true);
             registry_check_checkbox.setEnabled(true);
+            delete_all_users_checkbox.setEnabled(true);
             write_log_button.setEnabled(true);
+            help_button.setEnabled(true);
             results_table.setEnabled(true);
         }
     }
@@ -680,7 +752,6 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                     String suffix = profile_deleter.generateDateString();
                     profile_deleter.writeToFile("reports\\" + profile_deleter.getComputer() + "_deletion_report_" + suffix + ".txt", deleted_users);
                     profile_deleter.logMessage("Deletion report written to file reports\\" + profile_deleter.getComputer() + "_deletion_report_" + suffix + ".txt", ProfileDeleter.LOG_TYPE.INFO, true);
-                    updateTableData();
                     if (profile_deleter.getSizeCheckComplete()) {
                         double total_size = 0.0;
                         for (UserData user : profile_deleter.getUserList()) {
@@ -698,6 +769,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         @Override
         public void done() {
+            updateTableData();
             if (profile_deleter.getStateCheckComplete() && profile_deleter.getRegistryCheckComplete()) {
                 run_deletion_button.setEnabled(true);
             }
@@ -707,7 +779,9 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             size_check_checkbox.setEnabled(true);
             state_check_checkbox.setEnabled(true);
             registry_check_checkbox.setEnabled(true);
+            delete_all_users_checkbox.setEnabled(true);
             write_log_button.setEnabled(true);
+            help_button.setEnabled(true);
             results_table.setEnabled(true);
         }
     }

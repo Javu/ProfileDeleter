@@ -9,8 +9,8 @@ Should work on Windows 7 and higher versions.
 To do:
 
 * More tooltips.
-* Make a button to flag/unflag all users for deletion.
 * Fix formatting for size and date columns.
 * Different colour for undeletable rows.
+* Configuration file support
 
 Bugs:
