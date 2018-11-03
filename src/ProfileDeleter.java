@@ -193,6 +193,66 @@ public class ProfileDeleter {
     }
 
     /**
+     * Sets the logs location attribute.
+     * <p>
+     * Where log files should be stored.
+     *
+     * @param logs_location where log files should be stored
+     */
+    public void setLogsLocation(String logs_location) {
+        this.logs_location = logs_location;
+        logMessage("Logs location set to " + logs_location, LOG_TYPE.INFO, true);
+    }
+
+    /**
+     * Sets the pstools location attribute.
+     * <p>
+     * Where pstools files are stored.
+     *
+     * @param pstools_location where pstools files should be stored
+     */
+    public void setPstoolsLocation(String pstools_location) {
+        this.pstools_location = pstools_location;
+        logMessage("Pstools location set to " + pstools_location, LOG_TYPE.INFO, true);
+    }
+    
+    /**
+     * Sets the reports location attribute.
+     * <p>
+     * Where reports files should be stored.
+     *
+     * @param reports_location where reports files should be stored.
+     */
+    public void setReportsLocation(String reports_location) {
+        this.reports_location = reports_location;
+        logMessage("Reports location set to " + reports_location, LOG_TYPE.INFO, true);
+    }
+    
+    /**
+     * Sets the sessions location attribute.
+     * <p>
+     * Where sessions files should be stored.
+     *
+     * @param sessions_location where sessions files should be stored.
+     */
+    public void setSessionsLocation(String sessions_location) {
+        this.sessions_location = sessions_location;
+        logMessage("Sessions location set to " + sessions_location, LOG_TYPE.INFO, true);
+    }
+    
+    /**
+     * Sets the src location attribute.
+     * <p>
+     * Where src files are stored.
+     *
+     * @param src_location where src files are stored.
+     */
+    public void setSrcLocation(String src_location) {
+        this.src_location = src_location;
+        logMessage("Src location set to " + src_location, LOG_TYPE.INFO, true);
+    }
+
+    /**
      * Sets the size check attribute.
      * <p>
      * Determines whether a size check is done when checks are run.
@@ -203,19 +263,19 @@ public class ProfileDeleter {
         this.size_check = size_check;
         logMessage("Size check set to " + size_check, LOG_TYPE.INFO, true);
     }
-
+    
     /**
      * Sets the state check attribute.
      * <p>
      * Determines whether a state check is done when checks are run.
      *
-     * @param state_check whether to run a state check or not
+     * @param state_check whether to run a registry check or not
      */
     public void setStateCheck(boolean state_check) {
         this.state_check = state_check;
         logMessage("State check set to " + state_check, LOG_TYPE.INFO, true);
     }
-
+    
     /**
      * Sets the registry check attribute.
      * <p>
@@ -233,9 +293,9 @@ public class ProfileDeleter {
      * <p>
      * Whether a size check has been completed or not.
      *
-     * @param size_check Whether a size check has been completed or not
+     * @param size_check_complete Whether a size check has been completed or not
      */
-    public void setSizeCheckComplete(boolean size_check) {
+    public void setSizeCheckComplete(boolean size_check_complete) {
         this.size_check_complete = size_check_complete;
         logMessage("Size check complete set to " + size_check_complete, LOG_TYPE.INFO, true);
     }
@@ -245,9 +305,9 @@ public class ProfileDeleter {
      * <p>
      * Whether a state check has been completed or not.
      *
-     * @param state_check Whether a state check has been completed or not
+     * @param state_check_complete Whether a state check has been completed or not
      */
-    public void setStateCheckComplete(boolean state_check) {
+    public void setStateCheckComplete(boolean state_check_complete) {
         this.state_check_complete = state_check_complete;
         logMessage("State check complete set to " + state_check_complete, LOG_TYPE.INFO, true);
     }
@@ -257,14 +317,14 @@ public class ProfileDeleter {
      * <p>
      * Whether a registry check has been completed or not.
      *
-     * @param registry_check Whether a registry check has been completed or not
+     * @param registry_check_complete Whether a registry check has been completed or not
      */
     public void setRegistryCheckComplete(boolean registry_check_complete) {
         this.registry_check_complete = registry_check_complete;
         logMessage("Registry check complete set to " + registry_check_complete, LOG_TYPE.INFO, true);
     }
 
-    /**
+     /**
      * Sets the delete all users attribute.
      * <p>
      * Whether all users should be flagged for deletion or not.
@@ -373,6 +433,61 @@ public class ProfileDeleter {
      */
     public String getLocalDataDirectory() {
         return local_data_directory;
+    }
+    
+    /**
+     * Gets the logs location attribute.
+     * <p>
+     * Where log files should be stored.
+     *
+     * @return where log files should be stored.
+     */
+    public String getLogsLocation() {
+        return logs_location;
+    }
+
+    /**
+     * Gets the pstools location attribute.
+     * <p>
+     * Where pstools files should be stored.
+     *
+     * @return where pstools are stored.
+     */
+    public String getPstoolsLocation() {
+        return pstools_location;
+    }
+    
+    /**
+     * Gets the reports location attribute.
+     * <p>
+     * Where reports files should be stored.
+     *
+     * @return where reports files should be stored.
+     */
+    public String getReportsLocation() {
+        return reports_location;
+    }
+    
+    /**
+     * Gets the sessions location attribute.
+     * <p>
+     * Where sessions files should be stored.
+     *
+     * @return where sessions files should be stored.
+     */
+    public String getSessionsLocation() {
+        return sessions_location;
+    }
+    
+    /**
+     * Gets the src location attribute.
+     * <p>
+     * Where src files should be stored.
+     *
+     * @return where src files are stored.
+     */
+    public String getSrcLocation() {
+        return src_location;
     }
 
     /**

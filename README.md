@@ -14,3 +14,4 @@ To do:
 
 Bugs:
 * Ran a deletion that removed the whole ProfileGuid registry key. Need to investigate why this happened.
+*   - This may not be the case, for some reason it just wasn't showing the ProfileGuid keys from the computer I was on.
