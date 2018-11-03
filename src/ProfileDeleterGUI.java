@@ -95,11 +95,11 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         // Column header tooltips in the results table JTable GUI element.
         String[] columnToolTips = {
-            "Cannot delete if state is not Editable and cannot delete the Public account",
+            "Cannot delete if state is not Editable and cannot delete users on the cannot delete list",
             null,
             null,
             null,
-            null,
+            "If Uneditable user may be logged in or PC may need to be restarted. User may also be on the cannot delete list",
             null,
             null
         };
@@ -114,12 +114,24 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 int realColumnIndex = convertColumnIndexToModel(colIndex);
                 int realRowIndex = convertRowIndexToModel(rowIndex);
 
+                TableModel model = getModel();
+                String editable = (String) model.getValueAt(realRowIndex, 4);
+                String name = (String) model.getValueAt(realRowIndex, 1);
                 if (realColumnIndex == 0) {
-                    TableModel model = getModel();
-                    String editable = (String) model.getValueAt(realRowIndex, 4);
-                    String name = (String) model.getValueAt(realRowIndex, 1);
-                    if (editable.compareTo("Editable") != 0 || profile_deleter.getCannotDeleteList().contains(name)) {
-                        tip = "Cannot delete if state is not Editable and cannot delete the Public account";
+                    if (profile_deleter.getCannotDeleteList().contains(name.toLowerCase())) {
+                        tip = "User is in the cannot delete list, you cannot delete users in this list";
+                    } else if(editable.compareTo("Editable") != 0) {
+                        tip = "Cannot delete if state is not Editable";
+                    }
+                } else if(realColumnIndex == 1) {
+                    if (profile_deleter.getCannotDeleteList().contains(name.toLowerCase())) {
+                        tip = "User is in the cannot delete list, you cannot delete users in this list";
+                    }
+                } else if(realColumnIndex == 4) {
+                    if (profile_deleter.getCannotDeleteList().contains(name.toLowerCase())) {
+                        tip = "User is in the cannot delete list, you cannot delete users in this list";
+                    } else if(editable.compareTo("Uneditable") == 0) {
+                        tip = "User may be logged in or PC may need to be restarted";
                     }
                 }
                 return tip;
@@ -177,6 +189,8 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         // Initialisation of computer name input field GUI element.
         computer_name_text_field = new JTextField();
+        computer_name_text_field.setActionCommand("setComputer");
+        computer_name_text_field.addActionListener(this);
         computer_name_gc = new GridBagConstraints();
         computer_name_gc.fill = GridBagConstraints.BOTH;
         computer_name_gc.gridx = 0;
@@ -349,7 +363,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             }
 
             public boolean isCellEditable(int row, int col) {
-                if (col == 0 && getValueAt(row, 4) == "Editable" && !profile_deleter.getCannotDeleteList().contains(getValueAt(row, 1))) {
+                if (col == 0 && getValueAt(row, 4) == "Editable" && !profile_deleter.getCannotDeleteList().contains(getValueAt(row, 1).toString().toLowerCase())) {
                     return true;
                 } else {
                     return false;

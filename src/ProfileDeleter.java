@@ -116,7 +116,7 @@ public class ProfileDeleter {
         user_list = new ArrayList<>();
         log_list = new ArrayList<>();
         cannot_delete_list = new ArrayList<>();
-        cannot_delete_list.add("Public");
+        cannot_delete_list.add("public");
         session_id = "";
         size_check = false;
         state_check = true;
@@ -764,10 +764,10 @@ public class ProfileDeleter {
                     if (!line.isEmpty()) {
                         logMessage("Discovered folder details " + line, LOG_TYPE.INFO, true);
                         String[] line_split = line.split("\\t");
-                        UserData user = new UserData(true, line_split[0], line_split[1], "", "", "", "");
-                        if (cannot_delete_list.contains(line_split[0])) {
+                        UserData user = new UserData(false, line_split[0], line_split[1], "", "", "", "");
+                        /*if (cannot_delete_list.contains(line_split[0].toLowerCase())) {
                             user.setDelete(false);
-                        }
+                        }*/
                         user_list.add(user);
                     }
                 }
@@ -830,7 +830,7 @@ public class ProfileDeleter {
                 String user = user_list.get(i).getName();
                 logMessage("Checking editable state of folder " + user, LOG_TYPE.INFO, true);
                 try {
-                    if (!cannot_delete_list.contains(user)) {
+                    if (!cannot_delete_list.contains(user.toLowerCase())) {
                         directoryRename(computer, "C:\\users\\", user, user);
                         user_list.get(i).setState("Editable");
                         user_list.get(i).setDelete(true);
@@ -840,8 +840,8 @@ public class ProfileDeleter {
                         logMessage("User is in the cannot delete list, skipping check for this user", LOG_TYPE.INFO, true);
                     }
                 } catch (CannotEditException e) {
-                    String message = "Uneditable. User may be logged in or PC may need to be restarted";
-                    logMessage(message, LOG_TYPE.WARNING, true);
+                    String message = "Uneditable";
+                    logMessage(message + ". User may be logged in or PC may need to be restarted", LOG_TYPE.WARNING, true);
                     user_list.get(i).setState(message);
                     user_list.get(i).setDelete(false);
                 } catch (IOException e) {
