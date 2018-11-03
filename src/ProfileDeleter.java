@@ -13,6 +13,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 /**
@@ -62,6 +64,11 @@ public class ProfileDeleter {
     private List<String> should_not_delete_list;
     private List<String> log_list;
     private String session_id;
+    private String logs_location;
+    private String pstools_location;
+    private String reports_location;
+    private String sessions_location;
+    private String src_location;
     private boolean size_check;
     private boolean state_check;
     private boolean registry_check;
@@ -93,7 +100,7 @@ public class ProfileDeleter {
     /**
      * Constructor for ProfileDeleter class.
      */
-    public ProfileDeleter() {
+    public ProfileDeleter() throws UnrecoverableException {
         this(null);
     }
 
@@ -110,7 +117,7 @@ public class ProfileDeleter {
      * @param log_updated the ActonListener to notify that the log has been
      * updated
      */
-    public ProfileDeleter(ActionListener log_updated) {
+    public ProfileDeleter(ActionListener log_updated) throws UnrecoverableException {
         computer = "";
         users_directory = "";
         remote_data_directory = "";
@@ -118,11 +125,13 @@ public class ProfileDeleter {
         user_list = new ArrayList<>();
         log_list = new ArrayList<>();
         cannot_delete_list = new ArrayList<>();
-        cannot_delete_list.add("public");
         should_not_delete_list = new ArrayList<>();
-        should_not_delete_list.add("administrator");
-        should_not_delete_list.add("intranet");
         session_id = "";
+        logs_location = "";
+        pstools_location = "";
+        reports_location = "";
+        sessions_location = "";
+        src_location = "";
         size_check = false;
         state_check = true;
         registry_check = true;
@@ -131,6 +140,12 @@ public class ProfileDeleter {
         registry_check_complete = false;
         delete_all_users = true;
         this.log_updated = log_updated;
+        try {
+            loadConfigFile();
+        } catch (UnrecoverableException e) {
+            String message = e.getMessage() + ". Cannot recover from this error";
+            throw new UnrecoverableException(message);
+        }
     }
 
     /**
@@ -559,6 +574,12 @@ public class ProfileDeleter {
             }
             user_list = new_folders;
             logMessage("Completed deletions", LOG_TYPE.INFO, true);
+            try {
+                writeToFile(reports_location + "\\" + getComputer() + "_deletion_report_" + session_id + ".txt", deleted_folders);
+                logMessage("Deletion report written to file " + reports_location + "\\" + getComputer() + "_deletion_report_" + session_id + ".txt", LOG_TYPE.INFO, true);
+            } catch (IOException e) {
+                logMessage("Failed to write deletion report to file " + reports_location + "\\" + getComputer() + "_deletion_report_" + session_id + ".txt. Error is: " + e.getMessage(), LOG_TYPE.ERROR, true);
+            }
             return deleted_folders;
         } else {
             String message = "Either user list has not been initialised or a state and/or registry check has not been run";
@@ -818,7 +839,7 @@ public class ProfileDeleter {
         if (users_directory.compareTo("") != 0) {
             try {
                 user_list = new ArrayList<>();
-                String command = "Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process | powershell.exe -File \".\\src\\GetDirectoryList.ps1\" - directory " + users_directory;
+                String command = "Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process | powershell.exe -File \"" + src_location + "\\GetDirectoryList.ps1\" - directory " + users_directory;
                 ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-Command", command);
                 builder.redirectErrorStream(true);
                 Process power_shell_process = builder.start();
@@ -1024,10 +1045,10 @@ public class ProfileDeleter {
                 throw new CannotEditException(message);
             }
             try {
-                directoryCreate(".\\sessions\\" + computer + "_" + session_id);
-                local_data_directory = ".\\sessions\\" + computer + "_" + session_id;
+                directoryCreate(sessions_location + "\\" + computer + "_" + session_id);
+                local_data_directory = sessions_location + "\\" + computer + "_" + session_id;
             } catch (IOException | CannotEditException e) {
-                String message = "Unable to create local data directory " + ".\\sessions\\" + computer + "_" + session_id;
+                String message = "Unable to create local data directory " + sessions_location + "\\" + computer + "_" + session_id;
                 logMessage(message, LOG_TYPE.ERROR, true);
                 throw new CannotEditException(message);
             }
@@ -1062,7 +1083,7 @@ public class ProfileDeleter {
     public void directoryRename(String computer, String directory, String folder, String folder_renamed) throws IOException, CannotEditException {
         try {
             logMessage("Attempting to rename folder " + directory + folder + " to " + folder_renamed, LOG_TYPE.INFO, true);
-            String command = ".\\pstools\\psexec /accepteula \\\\" + computer + " cmd /c REN \"" + directory + folder + "\" \"" + folder_renamed + "\" && echo editable|| echo uneditable";
+            String command = pstools_location + "\\psexec /accepteula \\\\" + computer + " cmd /c REN \"" + directory + folder + "\" \"" + folder_renamed + "\" && echo editable|| echo uneditable";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);
             Process cmd_process = builder.start();
@@ -1099,7 +1120,7 @@ public class ProfileDeleter {
     public String findFolderSize(String user) throws NonNumericException, IOException {
         try {
             logMessage("Calculating filesize for folder " + users_directory + user, LOG_TYPE.INFO, true);
-            String command = "Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process | powershell.exe -File \".\\src\\GetFolderSize.ps1\" - directory " + users_directory + user;
+            String command = "Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process | powershell.exe -File \"" + src_location + "\\GetFolderSize.ps1\" - directory " + users_directory + user;
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-command", command);
             builder.redirectErrorStream(true);
             Process power_shell_process = builder.start();
@@ -1117,7 +1138,7 @@ public class ProfileDeleter {
                 logMessage("Successfully calculated filesize for folder " + users_directory + user + ": " + output, LOG_TYPE.INFO, true);
                 return output;
             } else {
-                String message = "Size calculated is not a number. Ensure powershell script .\\src\\GetFolderSize.ps1 is correct";
+                String message = "Size calculated is not a number. Ensure powershell script " + src_location + "\\GetFolderSize.ps1 is correct";
                 logMessage(message, LOG_TYPE.ERROR, true);
                 throw new NonNumericException(message);
             }
@@ -1381,7 +1402,7 @@ public class ProfileDeleter {
     public void registryBackup(String computer, String reg_key, String full_file_name) throws IOException, CannotEditException, InterruptedException {
         try {
             logMessage("Attempting to backup registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name, LOG_TYPE.INFO, true);
-            String command = ".\\pstools\\psexec /accepteula \\\\" + computer + " REG EXPORT \"" + reg_key + "\" \"" + full_file_name + "\" /y";
+            String command = pstools_location + "\\psexec /accepteula \\\\" + computer + " REG EXPORT \"" + reg_key + "\" \"" + full_file_name + "\" /y";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);
             Process cmd_process = builder.start();
@@ -1420,7 +1441,7 @@ public class ProfileDeleter {
     public void registryDelete(String computer, String reg_key) throws IOException, InterruptedException {
         try {
             logMessage("Attempting to delete registry key " + reg_key + " from computer " + computer, LOG_TYPE.INFO, true);
-            String command = ".\\pstools\\psexec /accepteula \\\\" + computer + " REG DELETE \"" + reg_key + "\" /f";
+            String command = pstools_location + "\\psexec /accepteula \\\\" + computer + " REG DELETE \"" + reg_key + "\" /f";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);
             Process cmd_process = builder.start();
@@ -1569,7 +1590,7 @@ public class ProfileDeleter {
     public String writeLog() throws IOException, NotInitialisedException {
         if (!log_list.isEmpty()) {
             try {
-                String filename = "logs\\Profile_Deleter_Log_" + generateDateString() + ".txt";
+                String filename = logs_location + "\\Profile_Deleter_Log_" + generateDateString() + ".txt";
                 writeToFile(filename, log_list);
                 return filename;
             } catch (IOException e) {
@@ -1577,6 +1598,50 @@ public class ProfileDeleter {
             }
         } else {
             throw new NotInitialisedException("Nothing has been logged");
+        }
+    }
+
+    /**
+     * Loads the profiledelete.config file.
+     * <p>
+     * This file contains configuration information for the ProfileDeleter
+     * class.
+     * It specifies where the various data folders are located and populates the
+     * cannot delete list and should not delete list attributes.
+     *
+     *
+     * @throws UnrecoverableException if the profiledeleter.config file cannot
+     * be loaded or is incomplete
+     */
+    public void loadConfigFile() throws UnrecoverableException {
+        List<String> config_file = new ArrayList<>();
+        try {
+            config_file = readFromFile("profiledeleter.config");
+        } catch (IOException e) {
+            String message = "Unable to load config file";
+            throw new UnrecoverableException(message);
+        }
+
+        for (String line : config_file) {
+            if (line.startsWith("logs=")) {
+                logs_location = line.replace("logs=", "");
+            } else if (line.startsWith("pstools=")) {
+                pstools_location = line.replace("pstools=", "");
+            } else if (line.startsWith("reports=")) {
+                reports_location = line.replace("reports=", "");
+            } else if (line.startsWith("sessions=")) {
+                sessions_location = line.replace("sessions=", "");
+            } else if (line.startsWith("src=")) {
+                src_location = line.replace("src=", "");
+            } else if (line.startsWith("cannot_delete_list=")) {
+                cannot_delete_list.add(line.replace("cannot_delete_list=", ""));
+            } else if (line.startsWith("should_not_delete_list=")) {
+                should_not_delete_list.add(line.replace("should_not_delete_list=", ""));
+            }
+        }
+
+        if (logs_location == null || logs_location.isEmpty() || pstools_location == null || pstools_location.isEmpty() || reports_location == null || reports_location.isEmpty() || sessions_location == null || sessions_location.isEmpty() || src_location == null || src_location.isEmpty()) {
+            throw new UnrecoverableException("profiledeleter.config file is incomplete. Consider replacing with the backup file profiledelete.config.default");
         }
     }
 

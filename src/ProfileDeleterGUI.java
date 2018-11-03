@@ -14,6 +14,7 @@ import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
@@ -21,6 +22,7 @@ import javax.swing.JTextField;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
+import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
@@ -81,12 +83,23 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     public static void main(String args[]) {
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
-                new ProfileDeleterGUI();
+                try {
+                    new ProfileDeleterGUI();
+                } catch (UnrecoverableException e) {
+                    JFrame fatal_error = new JFrame("Fatal Error");
+                    fatal_error.setPreferredSize(new Dimension(250,250));
+                    fatal_error.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                    JLabel error_message = new JLabel("<html>" +  e.getMessage() + "</html>");
+                    error_message.setBorder(new EmptyBorder(20,20,20,20));
+                    fatal_error.getContentPane().add(error_message);
+                    fatal_error.pack();
+                    fatal_error.setVisible(true);
+                }
             }
         });
     }
 
-    public ProfileDeleterGUI() {
+    public ProfileDeleterGUI() throws UnrecoverableException {
         super("Profile Deleter");
 
         // The ProfileDeleter class that handles all the logic of the application.
@@ -742,27 +755,21 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         @Override
         protected Object doInBackground() throws Exception {
-            try {
-                List<String> deleted_users = profile_deleter.processDeletion();
-                deleted_users.add(0, "Deletion report:");
-                if (deleted_users.size() > 2) {
-                    for (String deleted_user : deleted_users) {
-                        system_console_text_area.append('\n' + deleted_user);
-                    }
-                    String suffix = profile_deleter.generateDateString();
-                    profile_deleter.writeToFile("reports\\" + profile_deleter.getComputer() + "_deletion_report_" + suffix + ".txt", deleted_users);
-                    profile_deleter.logMessage("Deletion report written to file reports\\" + profile_deleter.getComputer() + "_deletion_report_" + suffix + ".txt", ProfileDeleter.LOG_TYPE.INFO, true);
-                    if (profile_deleter.getSizeCheckComplete()) {
-                        double total_size = 0.0;
-                        for (UserData user : profile_deleter.getUserList()) {
-                            total_size += Double.parseDouble(user.getSize());
-                        }
-                        setTitle("Profile Deleter - " + profile_deleter.getComputer() + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
-                    }
-                } else {
-                    profile_deleter.logMessage("Nothing was flagged for deletion", ProfileDeleter.LOG_TYPE.WARNING, true);
+            List<String> deleted_users = profile_deleter.processDeletion();
+            deleted_users.add(0, "Deletion report:");
+            if (deleted_users.size() > 2) {
+                for (String deleted_user : deleted_users) {
+                    system_console_text_area.append('\n' + deleted_user);
                 }
-            } catch (NotInitialisedException | IOException e) {
+                if (profile_deleter.getSizeCheckComplete()) {
+                    double total_size = 0.0;
+                    for (UserData user : profile_deleter.getUserList()) {
+                        total_size += Double.parseDouble(user.getSize());
+                    }
+                    setTitle("Profile Deleter - " + profile_deleter.getComputer() + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
+                }
+            } else {
+                profile_deleter.logMessage("Nothing was flagged for deletion", ProfileDeleter.LOG_TYPE.WARNING, true);
             }
             return new Object();
         }

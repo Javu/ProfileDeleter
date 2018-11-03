@@ -11,6 +11,6 @@ To do:
 * More tooltips.
 * Fix formatting for size and date columns.
 * Different colour for undeletable rows.
-* Configuration file support
 
 Bugs:
+* Ran a deletion that removed the whole ProfileGuid registry key. Need to investigate why this happened.
