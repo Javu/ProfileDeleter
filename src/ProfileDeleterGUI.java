@@ -639,7 +639,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 profile_deleter.setSizeCheckComplete(false);
                 profile_deleter.setStateCheckComplete(false);
                 profile_deleter.setRegistryCheckComplete(false);
-                profile_deleter.setComputer(computer_name_text_field.getText());
+                profile_deleter.setRemoteComputer(computer_name_text_field.getText());
                 profile_deleter.generateUserList();
                 profile_deleter.checkAll();
                 if (profile_deleter.getSizeCheckComplete()) {
@@ -647,9 +647,9 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                     for (UserData user : profile_deleter.getUserList()) {
                         total_size += Double.parseDouble(user.getSize());
                     }
-                    setTitle("Profile Deleter - " + profile_deleter.getComputer() + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
+                    setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer() + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
                 } else {
-                    setTitle("Profile Deleter - " + profile_deleter.getComputer());
+                    setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer());
                 }
             } else {
                 profile_deleter.logMessage("Unable to ping computer, computer not set", ProfileDeleter.LOG_TYPE.WARNING, true);
@@ -660,7 +660,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         @Override
         public void done() {
             updateTableData();
-            if (ping_success || (profile_deleter.getComputer() != null && !profile_deleter.getComputer().isEmpty())) {
+            if (ping_success || (profile_deleter.getRemoteComputer() != null && !profile_deleter.getRemoteComputer().isEmpty())) {
                 rerun_checks_button.setEnabled(true);
             }
             if (profile_deleter.getStateCheckComplete() && profile_deleter.getRegistryCheckComplete()) {
@@ -685,14 +685,14 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         @Override
         protected Object doInBackground() throws Exception {
-            if (profile_deleter.getComputer() != null && !profile_deleter.getComputer().isEmpty()) {
+            if (profile_deleter.getRemoteComputer() != null && !profile_deleter.getRemoteComputer().isEmpty()) {
                 profile_deleter.checkAll();
                 if (profile_deleter.getSizeCheckComplete()) {
                     double total_size = 0.0;
                     for (UserData user : profile_deleter.getUserList()) {
                         total_size += Double.parseDouble(user.getSize());
                     }
-                    setTitle("Profile Deleter - " + profile_deleter.getComputer() + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
+                    setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer() + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
                 }
             }
             return new Object();
@@ -768,7 +768,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                     for (UserData user : profile_deleter.getUserList()) {
                         total_size += Double.parseDouble(user.getSize());
                     }
-                    setTitle("Profile Deleter - " + profile_deleter.getComputer() + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
+                    setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer() + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
                 }
             } else {
                 profile_deleter.logMessage("Nothing was flagged for deletion", ProfileDeleter.LOG_TYPE.WARNING, true);
