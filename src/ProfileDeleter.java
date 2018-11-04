@@ -13,8 +13,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 /**
@@ -55,12 +53,9 @@ public class ProfileDeleter {
     /**
      * Class attributes.
      */
-    private String local_computer;
     private String remote_computer;
     private String users_directory;
-    private String remote_data_directory;
     private String local_data_directory;
-    private String local_as_remote_data_directory;
     private List<UserData> user_list;
     private List<String> cannot_delete_list;
     private List<String> should_not_delete_list;
@@ -120,12 +115,9 @@ public class ProfileDeleter {
      * updated
      */
     public ProfileDeleter(ActionListener log_updated) throws UnrecoverableException {
-        local_computer = "";
         remote_computer = "";
         users_directory = "";
-        remote_data_directory = "";
         local_data_directory = "";
-        local_as_remote_data_directory = "";
         user_list = new ArrayList<>();
         log_list = new ArrayList<>();
         cannot_delete_list = new ArrayList<>();
@@ -153,16 +145,6 @@ public class ProfileDeleter {
     }
 
     /**
-     * Sets the local computer and users directory attributes.
-     *
-     * @param local_computer the hostname or IP address of the target computer
-     */
-    public void setLocalComputer(String local_computer) {
-        this.local_computer = local_computer;
-        logMessage("Local computer set to " + local_computer, LOG_TYPE.INFO, true);
-    }
-
-    /**
      * Sets the remote computer and users directory attributes.
      *
      * @param remote_computer the hostname or IP address of the target computer
@@ -182,17 +164,6 @@ public class ProfileDeleter {
     public void setUsersDirectory(String users_directory) {
         this.users_directory = users_directory;
         logMessage("Users directory set to " + users_directory, LOG_TYPE.INFO, true);
-    }
-
-    /**
-     * Sets the value of the remote data directory attribute
-     *
-     * @param remote_data_directory the filepath to the directory on the target
-     * computer for storing ProfileDeleter data
-     */
-    public void setRemoteDataDirectory(String remote_data_directory) {
-        this.remote_data_directory = remote_data_directory;
-        logMessage("Remote data directory set to " + remote_data_directory, LOG_TYPE.INFO, true);
     }
 
     /**
@@ -414,15 +385,6 @@ public class ProfileDeleter {
     }
 
     /**
-     * Gets the value of the local computer attribute.
-     *
-     * @return the local computers hostname or IP address
-     */
-    public String getLocalComputer() {
-        return local_computer;
-    }
-
-    /**
      * Gets the value of the remote computer attribute.
      *
      * @return the target computers hostname or IP address
@@ -438,16 +400,6 @@ public class ProfileDeleter {
      */
     public String getUsersDirectory() {
         return users_directory;
-    }
-
-    /**
-     * Gets the value of the remote data directory attribute
-     *
-     * @return the filepath to the directory on the target computer for storing
-     * ProfileDeleter data
-     */
-    public String getRemoteDataDirectory() {
-        return remote_data_directory;
     }
 
     /**
@@ -1159,33 +1111,6 @@ public class ProfileDeleter {
                 logMessage(message, LOG_TYPE.ERROR, true);
                 throw new CannotEditException(message);
             }
-            findLocalComputerHostname();
-            try {
-                logMessage("Attempting to find full path to local sessions folder as remote string", LOG_TYPE.INFO, true);
-                String command = "cd";
-                ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
-                builder.redirectErrorStream(true);
-                Process cmd_process = builder.start();
-                BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()));
-                String line = "";
-                String error = "";
-                while ((line = cmd_process_output_stream.readLine()) != null) {
-                    error = line;
-                }
-                if (error.compareTo("") != 0) {
-                    String drive = error.substring(0,1);
-                    local_as_remote_data_directory = "\\\\" + local_computer + "\\" + drive + "$" + error.substring(2, error.length()) + "\\" + local_data_directory.replace(".\\", "");
-                    logMessage("Successfully found full path to local sessions folder as remote string " + local_as_remote_data_directory, LOG_TYPE.INFO, true);
-                } else {
-                    String message = "Could not find full directory path";
-                    logMessage(message, LOG_TYPE.ERROR, true);
-                    throw new NotInitialisedException(message);
-                }
-            } catch (IOException | NotInitialisedException e) {
-                logMessage("Could not find local session folder as remote string", LOG_TYPE.ERROR, true);
-                logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
-                throw e;
-            }
             logMessage("Successfully created local session folder", LOG_TYPE.INFO, true);
         } else {
             String message = "";
@@ -1199,57 +1124,6 @@ public class ProfileDeleter {
                 message += "computer has not been initialised";
             }
             message += ". Please Initialise before running generateLocalSessionFolder";
-            logMessage(message, LOG_TYPE.ERROR, true);
-            throw new NotInitialisedException(message);
-        }
-    }
-
-    /**
-     * Creates the remote session folder for the deletion to run.
-     * <p>
-     * Creates a folder on the remote computer in C:\temp.<br>
-     * Session ID attribute must be set. The folder is named using the session
-     * ID so that it is unique.<br>
-     * Remote computer must be set otherwise the folder cannot be created.
-     *
-     * @throws NotInitialisedException thrown if the session ID or remote
-     * computer attribute are not set
-     * @throws IOException an IO error occurs when trying to create the needed
-     * folder
-     * @throws CannotEditException unable to create the needed folder on the
-     * remote computer
-     */
-    public void generateRemoteSessionFolder() throws NotInitialisedException, IOException, CannotEditException {
-        logMessage("Attempting to create remote session folder", LOG_TYPE.INFO, true);
-        if (session_id.compareTo("") != 0 && remote_computer.compareTo("") != 0) {
-            try {
-                directoryCreate("\\\\" + remote_computer + "\\c$\\temp\\Profile_Deleter");
-            } catch (IOException | CannotEditException e) {
-                String message = "Unable to create folder \\\\" + remote_computer + "\\c$\\temp\\Profile_Deleter";
-                logMessage(message, LOG_TYPE.ERROR, true);
-                throw e;
-            }
-            try {
-                directoryCreate("\\\\" + remote_computer + "\\c$\\temp\\Profile_Deleter\\" + session_id);
-                remote_data_directory = "\\\\" + remote_computer + "\\c$\\temp\\Profile_Deleter\\" + session_id;
-            } catch (IOException | CannotEditException e) {
-                String message = "Unable to create remote data directory " + "\\\\" + remote_computer + "\\c$\\temp\\Profile_Deleter\\" + session_id;
-                logMessage(message, LOG_TYPE.ERROR, true);
-                throw new CannotEditException(message);
-            }
-            logMessage("Successfully created remote session folder", LOG_TYPE.INFO, true);
-        } else {
-            String message = "";
-            if (session_id.compareTo("") == 0) {
-                message += "Session ID has not been created";
-            }
-            if (remote_computer.compareTo("") == 0) {
-                if (message.compareTo("") != 0) {
-                    message += " and ";
-                }
-                message += "computer has not been initialised";
-            }
-            message += ". Please Initialise before running generateRemoteSessionFolder";
             logMessage(message, LOG_TYPE.ERROR, true);
             throw new NotInitialisedException(message);
         }
@@ -1286,41 +1160,6 @@ public class ProfileDeleter {
         } catch (CannotEditException | IOException e) {
             logMessage("Could not rename directory " + directory + folder, LOG_TYPE.WARNING, true);
             logMessage(e.getMessage(), LOG_TYPE.WARNING, true);
-            throw e;
-        }
-    }
-
-    /**
-     * Gets the hostname of the local computer.
-     *
-     * @throws NotInitialisedException Unable to find the hostname from cmd
-     * command hostname
-     * @throws IOException Failed to run cmd process
-     */
-    public void findLocalComputerHostname() throws NotInitialisedException, IOException {
-        try {
-            logMessage("Attempting to find local computer hostname", LOG_TYPE.INFO, true);
-            String command = "hostname";
-            ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
-            builder.redirectErrorStream(true);
-            Process cmd_process = builder.start();
-            BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()));
-            String line = "";
-            String error = "";
-            while ((line = cmd_process_output_stream.readLine()) != null) {
-                error = line;
-            }
-            if (error.compareTo("") != 0) {
-                local_computer = error;
-                logMessage("Successfully found hostname " + local_computer, LOG_TYPE.INFO, true);
-            } else {
-                String message = "Could not find hostname";
-                logMessage(message, LOG_TYPE.ERROR, true);
-                throw new NotInitialisedException(message);
-            }
-        } catch (IOException e) {
-            logMessage("Could not find hostname", LOG_TYPE.ERROR, true);
-            logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
         }
     }
@@ -1617,7 +1456,7 @@ public class ProfileDeleter {
      * writing the file
      * @throws CannotEditException unable to access the registry key or unable
      * to create the backup file
-     * @throws InterruptedException the pstools process thread was interrupted
+     * @throws InterruptedException the cmd process thread was interrupted
      */
     public void registryBackup(String computer, String reg_key, String full_file_name) throws IOException, CannotEditException, InterruptedException {
         try {
