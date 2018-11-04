@@ -1,8 +1,0 @@
-logs=.\\logs
-pstools=.\\pstools
-reports=.\\reports
-sessions=.\\sessions
-src=.\\src
-cannot_delete_list=public
-should_not_delete_list=administrator
-should_not_delete_list=intranet
