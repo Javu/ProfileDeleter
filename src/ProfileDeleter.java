@@ -215,7 +215,7 @@ public class ProfileDeleter {
         this.pstools_location = pstools_location;
         logMessage("Pstools location set to " + pstools_location, LOG_TYPE.INFO, true);
     }
-    
+
     /**
      * Sets the reports location attribute.
      * <p>
@@ -227,7 +227,7 @@ public class ProfileDeleter {
         this.reports_location = reports_location;
         logMessage("Reports location set to " + reports_location, LOG_TYPE.INFO, true);
     }
-    
+
     /**
      * Sets the sessions location attribute.
      * <p>
@@ -239,7 +239,7 @@ public class ProfileDeleter {
         this.sessions_location = sessions_location;
         logMessage("Sessions location set to " + sessions_location, LOG_TYPE.INFO, true);
     }
-    
+
     /**
      * Sets the src location attribute.
      * <p>
@@ -263,7 +263,7 @@ public class ProfileDeleter {
         this.size_check = size_check;
         logMessage("Size check set to " + size_check, LOG_TYPE.INFO, true);
     }
-    
+
     /**
      * Sets the state check attribute.
      * <p>
@@ -275,7 +275,7 @@ public class ProfileDeleter {
         this.state_check = state_check;
         logMessage("State check set to " + state_check, LOG_TYPE.INFO, true);
     }
-    
+
     /**
      * Sets the registry check attribute.
      * <p>
@@ -305,7 +305,8 @@ public class ProfileDeleter {
      * <p>
      * Whether a state check has been completed or not.
      *
-     * @param state_check_complete Whether a state check has been completed or not
+     * @param state_check_complete Whether a state check has been completed or
+     * not
      */
     public void setStateCheckComplete(boolean state_check_complete) {
         this.state_check_complete = state_check_complete;
@@ -317,14 +318,15 @@ public class ProfileDeleter {
      * <p>
      * Whether a registry check has been completed or not.
      *
-     * @param registry_check_complete Whether a registry check has been completed or not
+     * @param registry_check_complete Whether a registry check has been
+     * completed or not
      */
     public void setRegistryCheckComplete(boolean registry_check_complete) {
         this.registry_check_complete = registry_check_complete;
         logMessage("Registry check complete set to " + registry_check_complete, LOG_TYPE.INFO, true);
     }
 
-     /**
+    /**
      * Sets the delete all users attribute.
      * <p>
      * Whether all users should be flagged for deletion or not.
@@ -434,7 +436,7 @@ public class ProfileDeleter {
     public String getLocalDataDirectory() {
         return local_data_directory;
     }
-    
+
     /**
      * Gets the logs location attribute.
      * <p>
@@ -456,7 +458,7 @@ public class ProfileDeleter {
     public String getPstoolsLocation() {
         return pstools_location;
     }
-    
+
     /**
      * Gets the reports location attribute.
      * <p>
@@ -467,7 +469,7 @@ public class ProfileDeleter {
     public String getReportsLocation() {
         return reports_location;
     }
-    
+
     /**
      * Gets the sessions location attribute.
      * <p>
@@ -478,7 +480,7 @@ public class ProfileDeleter {
     public String getSessionsLocation() {
         return sessions_location;
     }
-    
+
     /**
      * Gets the src location attribute.
      * <p>
@@ -1729,39 +1731,110 @@ public class ProfileDeleter {
      * be loaded or is incomplete
      */
     public void loadConfigFile() throws UnrecoverableException {
+        logMessage("Attempting to load a configuration file", LOG_TYPE.INFO, true);
         List<String> config_file = new ArrayList<>();
-        try {
-            config_file = readFromFile("profiledeleter.config");
-        } catch (IOException e) {
-            String message = "Unable to load config file";
-            throw new UnrecoverableException(message);
-        }
+        boolean failed_to_load_config = false;
+        boolean failed_to_load_config_default = false;
+        boolean attempting_to_load_config = true;
+        while (attempting_to_load_config) {
+            logs_location = "";
+            pstools_location = "";
+            reports_location = "";
+            sessions_location = "";
+            src_location = "";
+            cannot_delete_list = new ArrayList<>();
+            should_not_delete_list = new ArrayList<>();
+            try {
+                if (!failed_to_load_config) {
+                    logMessage("Attempting to load profiledeleter.config", LOG_TYPE.INFO, true);
+                    config_file = readFromFile("profiledeleter.config");
+                } else {
+                    logMessage("Attempting to load profiledeleter.config.default", LOG_TYPE.INFO, true);
+                    config_file = readFromFile("profiledeleter.config.default");
+                }
+                for (String line : config_file) {
+                    if (line.startsWith("logs=")) {
+                        logs_location = line.replace("logs=", "");
+                    } else if (line.startsWith("pstools=")) {
+                        pstools_location = line.replace("pstools=", "");
+                    } else if (line.startsWith("reports=")) {
+                        reports_location = line.replace("reports=", "");
+                    } else if (line.startsWith("sessions=")) {
+                        sessions_location = line.replace("sessions=", "");
+                    } else if (line.startsWith("src=")) {
+                        src_location = line.replace("src=", "");
+                    } else if (line.startsWith("cannot_delete_list=")) {
+                        cannot_delete_list.add(line.replace("cannot_delete_list=", ""));
+                    } else if (line.startsWith("should_not_delete_list=")) {
+                        should_not_delete_list.add(line.replace("should_not_delete_list=", ""));
+                    }
+                }
 
-        for (String line : config_file) {
-            if (line.startsWith("logs=")) {
-                logs_location = line.replace("logs=", "");
-            } else if (line.startsWith("pstools=")) {
-                pstools_location = line.replace("pstools=", "");
-            } else if (line.startsWith("reports=")) {
-                reports_location = line.replace("reports=", "");
-            } else if (line.startsWith("sessions=")) {
-                sessions_location = line.replace("sessions=", "");
-            } else if (line.startsWith("src=")) {
-                src_location = line.replace("src=", "");
-            } else if (line.startsWith("cannot_delete_list=")) {
-                cannot_delete_list.add(line.replace("cannot_delete_list=", ""));
-            } else if (line.startsWith("should_not_delete_list=")) {
-                should_not_delete_list.add(line.replace("should_not_delete_list=", ""));
+                if (logs_location == null || logs_location.isEmpty() || pstools_location == null || pstools_location.isEmpty() || reports_location == null || reports_location.isEmpty() || sessions_location == null || sessions_location.isEmpty() || src_location == null || src_location.isEmpty()) {
+                    if (!failed_to_load_config) {
+                        logMessage("Profiledeleter.config file is incomplete, will attempt to load profiledeleter.config.default instead", LOG_TYPE.ERROR, true);
+                        failed_to_load_config = true;
+                    } else {
+                        if (!failed_to_load_config_default) {
+                            logMessage("Profiledeleter.config.default file is incomplete", LOG_TYPE.ERROR, true);
+                            logMessage("Attempting to recreate profiledeleter.config.default", LOG_TYPE.INFO, true);
+                            failed_to_load_config_default = true;
+                            List<String> profile_deleter_config_default = new ArrayList<>();
+                            profile_deleter_config_default.add("logs=.\\\\logs");
+                            profile_deleter_config_default.add("pstools=.\\\\pstools");
+                            profile_deleter_config_default.add("reports=.\\\\reports");
+                            profile_deleter_config_default.add("sessions=.\\\\sessions");
+                            profile_deleter_config_default.add("src=.\\\\src");
+                            profile_deleter_config_default.add("cannot_delete_list=public");
+                            profile_deleter_config_default.add("should_not_delete_list=administrator");
+                            profile_deleter_config_default.add("should_not_delete_list=intranet");
+                            writeToFile("profiledeleter.config.default", profile_deleter_config_default, false);
+                            logMessage("Successfully recreated profiledeleter.config.default", LOG_TYPE.INFO, true);
+                        } else {
+                            logMessage("Profiledeleter.config.default is incomplete, program cannot start without a working config file", LOG_TYPE.ERROR, true);
+                            throw new UnrecoverableException("profiledeleter.config and profiledeleter.config.default files are incomplete");
+                        }
+                    }
+                } else {
+                    logMessage("Successfully loaded config file", LOG_TYPE.INFO, true);
+                    attempting_to_load_config = false;
+                }
+            } catch (IOException e) {
+                if (!failed_to_load_config) {
+                    logMessage("Failed to load profiledeleter.config, will attempt to load profiledeleter.config.default instead", LOG_TYPE.ERROR, true);
+                    failed_to_load_config = true;
+                } else {
+                    if(!failed_to_load_config_default) {
+                        logMessage("Failed to load profiledeleter.config.default", LOG_TYPE.ERROR, true);
+                        logMessage("Attempting to recreate profiledeleter.config.default", LOG_TYPE.INFO, true);
+                        failed_to_load_config_default = true;
+                        List<String> profile_deleter_config_default = new ArrayList<>();
+                        profile_deleter_config_default.add("logs=.\\\\logs");
+                        profile_deleter_config_default.add("pstools=.\\\\pstools");
+                        profile_deleter_config_default.add("reports=.\\\\reports");
+                        profile_deleter_config_default.add("sessions=.\\\\sessions");
+                        profile_deleter_config_default.add("src=.\\\\src");
+                        profile_deleter_config_default.add("cannot_delete_list=public");
+                        profile_deleter_config_default.add("should_not_delete_list=administrator");
+                        profile_deleter_config_default.add("should_not_delete_list=intranet");
+                        try {
+                            writeToFile("profiledeleter.config.default", profile_deleter_config_default, false);
+                            logMessage("Successfully recreated profiledeleter.config.default", LOG_TYPE.INFO, true);
+                        } catch (IOException e2) {
+                            logMessage("Failed to recreate profiledeleter.config.default", LOG_TYPE.ERROR, true);
+                        }
+                    } else {
+                        String message = "Unable to load any config file, program cannot start";
+                        logMessage(message, LOG_TYPE.ERROR, true);
+                        throw new UnrecoverableException(message);
+                    }
+                }
             }
-        }
-
-        if (logs_location == null || logs_location.isEmpty() || pstools_location == null || pstools_location.isEmpty() || reports_location == null || reports_location.isEmpty() || sessions_location == null || sessions_location.isEmpty() || src_location == null || src_location.isEmpty()) {
-            throw new UnrecoverableException("profiledeleter.config file is incomplete. Consider replacing with the backup file profiledelete.config.default");
         }
     }
 
     /**
-     * Reads all lines in a file and adds the to a String list.
+     * Reads all lines in a file and adds them to a String list.
      *
      * @param filename the path + filename of the file to read
      * @return the contents of the file compiled into a String list
@@ -1784,16 +1857,34 @@ public class ProfileDeleter {
 
     /**
      * Write all lines in a String list to a file.
+     * <p>
+     * Appends to the end of the file.
      *
      * @param filename the path + filename of the file to write to
      * @param write_to_file the String list to write to the file
      * @throws IOException an IO error occurred when trying to write to the file
      */
     public void writeToFile(String filename, List<String> write_to_file) throws IOException {
+        writeToFile(filename, write_to_file, true);
+    }
+
+    /**
+     * Write all lines in a String list to a file.
+     * <p>
+     * Can specify whether to append to the end of the file or write from the
+     * beginning.
+     *
+     * @param filename the path + filename of the file to write to
+     * @param write_to_file the String list to write to the file
+     * @param append whether to append to the end of the file or write from the
+     * beginning
+     * @throws IOException an IO error occurred when trying to write to the file
+     */
+    public void writeToFile(String filename, List<String> write_to_file, boolean append) throws IOException {
         try {
             int count = 0;
             File file = new File(filename);
-            BufferedWriter writer = new BufferedWriter(new FileWriter(file, true));
+            BufferedWriter writer = new BufferedWriter(new FileWriter(file, append));
             for (String string_line : write_to_file) {
                 if (count > 0) {
                     writer.newLine();

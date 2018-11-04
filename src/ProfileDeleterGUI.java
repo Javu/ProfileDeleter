@@ -437,7 +437,9 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     @Override
     public void actionPerformed(ActionEvent e) {
         if ("LogWritten" == e.getActionCommand()) {
-            writeLogToSystemConsole();
+            if(system_console_text_area != null) {
+                writeLogToSystemConsole();
+            }
         } else if ("setComputer" == e.getActionCommand()) {
             setComputerButton();
         } else if ("RerunChecks" == e.getActionCommand()) {
