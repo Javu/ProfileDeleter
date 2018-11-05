@@ -91,10 +91,10 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                     new ProfileDeleterGUI();
                 } catch (UnrecoverableException e) {
                     JFrame fatal_error = new JFrame("Fatal Error");
-                    fatal_error.setPreferredSize(new Dimension(250,250));
+                    fatal_error.setPreferredSize(new Dimension(250, 250));
                     fatal_error.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-                    JLabel error_message = new JLabel("<html>" +  e.getMessage() + "</html>");
-                    error_message.setBorder(new EmptyBorder(20,20,20,20));
+                    JLabel error_message = new JLabel("<html>" + e.getMessage() + "</html>");
+                    error_message.setBorder(new EmptyBorder(20, 20, 20, 20));
                     fatal_error.getContentPane().add(error_message);
                     fatal_error.pack();
                     fatal_error.setVisible(true);
@@ -289,7 +289,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         // Initialisation of delete all users checkbox GUI element.
         delete_all_users_checkbox = new JCheckBox();
-        delete_all_users_checkbox.setSelected(true);
+        delete_all_users_checkbox.setSelected(false);
         delete_all_users_checkbox.setText("Delete All");
         delete_all_users_checkbox.setActionCommand("DeleteAllUsersToggle");
         delete_all_users_checkbox.addActionListener(this);
@@ -361,6 +361,32 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         getContentPane().add(system_console_scroll_pane, system_console_gc);
         pack();
         setVisible(true);
+    }
+
+    /**
+     * Converts a double value to a formatted String value.
+     * <p>
+     * The value passed is converted to a long value and has , added every 3rd
+     * number.
+     *
+     * @param format_value the value to format
+     * @return the value with the decimal place removed and , added every 3rd
+     * number
+     */
+    private String doubleToFormattedString(Double format_value) {
+        long double_to_long = Math.round(format_value);
+        String double_to_long_string = Long.toString(double_to_long);
+        String foramatted_string = "";
+        int count = 0;
+        for (int i = double_to_long_string.length() - 1; i >= 0; i--) {
+            if (count == 3) {
+                foramatted_string = "," + foramatted_string;
+                count = 0;
+            }
+            foramatted_string = double_to_long_string.charAt(i) + foramatted_string;
+            count++;
+        }
+        return foramatted_string;
     }
 
     /**
@@ -441,7 +467,11 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         };
         TableCellRenderer size_renderer = new DefaultTableCellRenderer() {
             public void setValue(Object value) {
-                setText((value == null) ? "" : Long.toString((Long.valueOf(value.toString()) / (1024 * 1024))) + " MB");
+                String output = "";
+                if (value != null && !value.toString().isEmpty()) {
+                    output = doubleToFormattedString(Double.parseDouble(value.toString()) / (1024.0 * 1024.0)) + " MB";
+                }
+                setText(output);
             }
         };
         results_table.getColumnModel().getColumn(2).setCellRenderer(date_renderer);
@@ -457,7 +487,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     @Override
     public void actionPerformed(ActionEvent e) {
         if ("LogWritten" == e.getActionCommand()) {
-            if(system_console_text_area != null) {
+            if (system_console_text_area != null) {
                 writeLogToSystemConsole();
             }
         } else if ("setComputer" == e.getActionCommand()) {
@@ -667,7 +697,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                     for (UserData user : profile_deleter.getUserList()) {
                         total_size += Double.parseDouble(user.getSize());
                     }
-                    setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer() + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
+                    setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer() + " - Total Users Size: " + doubleToFormattedString(total_size / (1024.0 * 1024.0)) + " MB");
                 } else {
                     setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer());
                 }
@@ -712,7 +742,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                     for (UserData user : profile_deleter.getUserList()) {
                         total_size += Double.parseDouble(user.getSize());
                     }
-                    setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer() + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
+                    setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer() + " - Total Users Size: " + doubleToFormattedString(total_size / (1024.0 * 1024.0)) + " MB");
                 }
             }
             return new Object();
@@ -788,7 +818,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                     for (UserData user : profile_deleter.getUserList()) {
                         total_size += Double.parseDouble(user.getSize());
                     }
-                    setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer() + " - Total Users Size: " + Math.round(total_size / (1024.0 * 1024.0)) + "MB");
+                    setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer() + " - Total Users Size: " + doubleToFormattedString(total_size / (1024.0 * 1024.0)) + " MB");
                 }
             } else {
                 profile_deleter.logMessage("Nothing was flagged for deletion", ProfileDeleter.LOG_TYPE.WARNING, true);

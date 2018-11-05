@@ -135,7 +135,7 @@ public class ProfileDeleter {
         size_check_complete = false;
         state_check_complete = false;
         registry_check_complete = false;
-        delete_all_users = true;
+        delete_all_users = false;
         this.log_updated = log_updated;
         try {
             loadConfigFile();
@@ -681,11 +681,13 @@ public class ProfileDeleter {
             }
             user_list = new_folders;
             logMessage("Completed deletions", LOG_TYPE.INFO, true);
-            try {
-                writeToFile(reports_location + "\\" + getRemoteComputer() + "_deletion_report_" + session_id + ".txt", deleted_folders);
-                logMessage("Deletion report written to file " + reports_location + "\\" + getRemoteComputer() + "_deletion_report_" + session_id + ".txt", LOG_TYPE.INFO, true);
-            } catch (IOException e) {
-                logMessage("Failed to write deletion report to file " + reports_location + "\\" + getRemoteComputer() + "_deletion_report_" + session_id + ".txt. Error is: " + e.getMessage(), LOG_TYPE.ERROR, true);
+            if(deleted_folders.size() > 1) {
+                try {
+                    writeToFile(reports_location + "\\" + getRemoteComputer() + "_deletion_report_" + session_id + ".txt", deleted_folders);
+                    logMessage("Deletion report written to file " + reports_location + "\\" + getRemoteComputer() + "_deletion_report_" + session_id + ".txt", LOG_TYPE.INFO, true);
+                } catch (IOException e) {
+                    logMessage("Failed to write deletion report to file " + reports_location + "\\" + getRemoteComputer() + "_deletion_report_" + session_id + ".txt. Error is: " + e.getMessage(), LOG_TYPE.ERROR, true);
+                }
             }
             return deleted_folders;
         } else {
@@ -1551,7 +1553,19 @@ public class ProfileDeleter {
         }
         if (user_list.size() > 0) {
             Double size_in_megabytes = total_size / (1024.0 * 1024.0);
-            output += '\n' + "Total size:" + '\t' + (size_in_megabytes + " MB");
+            long size_in_megaytes_long = Math.round(size_in_megabytes);
+            String size_in_megabytes_long_string = Long.toString(size_in_megaytes_long);
+            String size_in_megabytes_string = "";
+            int count = 0;
+            for(int i = size_in_megabytes_long_string.length()-1; i < 0; i--) {
+                if(count == 2) {
+                    size_in_megabytes_string += ",";
+                    count = 0;
+                }
+                size_in_megabytes_string += size_in_megabytes_long_string.charAt(i);
+                count++;
+            }
+            output += '\n' + "Total size:" + '\t' + (size_in_megabytes_string + " MB");
         }
         logMessage("Successfully compiled user list into readable String", LOG_TYPE.INFO, true, false);
         return output;
