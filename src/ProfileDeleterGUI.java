@@ -10,6 +10,8 @@ import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -27,8 +29,10 @@ import javax.swing.border.LineBorder;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableModel;
 
 /**
@@ -365,7 +369,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
      * This needs to be run anytime the user list attribute is changed otherwise
      * the data in the results table will be outdated.
      */
-    public void updateTableData() {
+    private void updateTableData() {
         results_table.getModel().removeTableModelListener(this);
         results_table.setModel(new AbstractTableModel() {
             private String[] columnNames = UserData.headingsToStringArray();
@@ -388,23 +392,25 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             }
 
             public Class getColumnClass(int col) {
-                if (col == 0) {
-                    try {
-                        return Class.forName("java.lang.Boolean");
-                    } catch (ClassNotFoundException ex) {
-                        System.out.println("Couldn't find class");
-                        try {
-                            return Class.forName("java.lang.String");
-                        } catch (ClassNotFoundException ex1) {
-                            System.out.println("Couldn't find class");
-                        }
-                    }
-                } else {
-                    try {
-                        return Class.forName("java.lang.String");
-                    } catch (ClassNotFoundException ex) {
-                        System.out.println("Couldn't find class");
-                    }
+                String class_name = "";
+                switch (col) {
+                    case 0:
+                        class_name = "java.lang.Boolean";
+                        break;
+                    case 2:
+                        class_name = "java.util.Date";
+                        break;
+                    case 3:
+                        class_name = "java.lang.Integer";
+                        break;
+                    default:
+                        class_name = "java.lang.String";
+                        break;
+                }
+                try {
+                    return Class.forName(class_name);
+                } catch (ClassNotFoundException ex) {
+                    System.out.println("Couldn't find class " + class_name);
                 }
                 return null;
             }
@@ -426,6 +432,20 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 rowData = row_data;
             }
         });
+        TableCellRenderer date_renderer = new DefaultTableCellRenderer() {
+            DateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+
+            public void setValue(Object value) {
+                setText((value == null) ? "" : formatter.format(value));
+            }
+        };
+        TableCellRenderer size_renderer = new DefaultTableCellRenderer() {
+            public void setValue(Object value) {
+                setText((value == null) ? "" : Long.toString((Long.valueOf(value.toString()) / (1024 * 1024))) + " MB");
+            }
+        };
+        results_table.getColumnModel().getColumn(2).setCellRenderer(date_renderer);
+        results_table.getColumnModel().getColumn(3).setCellRenderer(size_renderer);
         results_table.setAutoCreateRowSorter(true);
         results_table.getModel().addTableModelListener(this);
     }

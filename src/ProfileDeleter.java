@@ -7,6 +7,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -589,10 +590,24 @@ public class ProfileDeleter {
      * @return 2D Object array of the user list attribute
      */
     public Object[][] convertUserListTo2DObjectArray() {
+        logMessage("Converting user list to 2D Object array", LOG_TYPE.INFO, true, false);
         Object[][] object_array = new Object[user_list.size()][];
         for (int i = 0; i < user_list.size(); i++) {
-            object_array[i] = user_list.get(i).toObjectArray();
+            object_array[i] = user_list.get(i).toObjectArray();/*
+            String last_updated_to_calendar = object_array[i][2].toString().replace(" ","/");
+            last_updated_to_calendar = last_updated_to_calendar.replace(":","/");
+            String[] calendar_fields = last_updated_to_calendar.split("/");
+            Calendar last_updated_as_calendar = Calendar.getInstance();
+            last_updated_as_calendar.set(Integer.parseInt(calendar_fields[2]), Integer.parseInt(calendar_fields[0]), Integer.parseInt(calendar_fields[1]), Integer.parseInt(calendar_fields[3]), Integer.parseInt(calendar_fields[4]), Integer.parseInt(calendar_fields[5]));
+            */
+            try {
+                Date last_updated_to_date = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss").parse(object_array[i][2].toString());
+                object_array[i][2] = last_updated_to_date;
+            } catch (ParseException e) {
+                logMessage("Failed to convert user " + user_list.get(i).getName() + " last updated to date. Last updated value is " + user_list.get(i).getLastUpdated(), LOG_TYPE.WARNING, true, false);
+            }
         }
+        logMessage("Converted user list to 2D Object array", LOG_TYPE.INFO, true, false);
         return object_array;
     }
 
