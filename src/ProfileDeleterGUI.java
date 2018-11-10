@@ -50,6 +50,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     boolean show_tooltips;
     int tooltip_delay_timer;
     int tooltip_dismiss_timer;
+    Color uneditable_color;
     
     /**
      * Swing GUI elements.
@@ -122,6 +123,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         show_tooltips = true;
         tooltip_delay_timer = 0;
         tooltip_dismiss_timer = 60000;
+        uneditable_color = new Color(235,235,235);
         List<String> config = new ArrayList<>();
         try {
             config = profile_deleter.readFromFile("profiledeleter.config");
@@ -467,7 +469,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         results_table.setModel(new AbstractTableModel() {
             private final String[] columnNames = UserData.headingsToStringArray();
             private Object[][] rowData = profile_deleter.convertUserListTo2DObjectArray();
-
+            
             @Override
             public String getColumnName(int col) {
                 return columnNames[col];
@@ -529,12 +531,37 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             }
         });
         // Determines how the last updated column should be displayed.
+        TableCellRenderer default_renderer = new DefaultTableCellRenderer() {
+
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean is_selected, boolean has_focus, int row, int column) {
+                Component tableCellRendererComponent = super.getTableCellRendererComponent(table, value, is_selected, has_focus, row, column);
+                if((table.getModel().getValueAt(table.convertRowIndexToModel(row),4)).toString().equals("Uneditable")) {
+                    setBackground(uneditable_color);
+                } else {
+                    setBackground(Color.WHITE);
+                }
+                return tableCellRendererComponent;
+            }
+        };
+        // Determines how the last updated column should be displayed.
         TableCellRenderer date_renderer = new DefaultTableCellRenderer() {
             DateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 
             @Override
             public void setValue(Object value) {
                 setText((value == null) ? "" : formatter.format(value));
+            }
+            
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean is_selected, boolean has_focus, int row, int column) {
+                Component tableCellRendererComponent = super.getTableCellRendererComponent(table, value, is_selected, has_focus, row, column);
+                if((table.getModel().getValueAt(table.convertRowIndexToModel(row),4)).toString().equals("Uneditable")) {
+                    setBackground(uneditable_color);
+                } else {
+                    setBackground(Color.WHITE);
+                }
+                return tableCellRendererComponent;
             }
         };
         // Determines how the size column should be displayed.
@@ -549,14 +576,24 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             }
 
             @Override
-            public Component getTableCellRendererComponent(JTable arg0, Object arg1, boolean arg2, boolean arg3, int arg4, int arg5) {
-                Component tableCellRendererComponent = super.getTableCellRendererComponent(arg0, arg1, arg2, arg3, arg4, arg5);
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean is_selected, boolean has_focus, int row, int column) {
+                Component tableCellRendererComponent = super.getTableCellRendererComponent(table, value, is_selected, has_focus, row, column);
                 ((DefaultTableCellRenderer) tableCellRendererComponent).setHorizontalAlignment(DefaultTableCellRenderer.RIGHT);
+                if((table.getModel().getValueAt(table.convertRowIndexToModel(row),4)).toString().equals("Uneditable")) {
+                    setBackground(uneditable_color);
+                } else {
+                    setBackground(Color.WHITE);
+                }
                 return tableCellRendererComponent;
             }
         };
+        results_table.getColumnModel().getColumn(0).setCellRenderer(default_renderer);
+        results_table.getColumnModel().getColumn(1).setCellRenderer(default_renderer);
         results_table.getColumnModel().getColumn(2).setCellRenderer(date_renderer);
         results_table.getColumnModel().getColumn(3).setCellRenderer(size_renderer);
+        results_table.getColumnModel().getColumn(4).setCellRenderer(default_renderer);
+        results_table.getColumnModel().getColumn(5).setCellRenderer(default_renderer);
+        results_table.getColumnModel().getColumn(6).setCellRenderer(default_renderer);
         results_table.setAutoCreateRowSorter(true);
         results_table.getModel().addTableModelListener(this);
     }
