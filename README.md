@@ -8,7 +8,7 @@ Should work on Windows 7 and higher versions.
 
 To do:
 
-* Different colour for undeletable rows.
+* Implement Help button
 
 Bugs:
 * Ran a deletion that removed the whole ProfileGuid registry key. Need to investigate why this happened.

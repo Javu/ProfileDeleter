@@ -51,7 +51,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     int tooltip_delay_timer;
     int tooltip_dismiss_timer;
     Color uneditable_color;
-    
+
     /**
      * Swing GUI elements.
      */
@@ -123,25 +123,26 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         show_tooltips = true;
         tooltip_delay_timer = 0;
         tooltip_dismiss_timer = 60000;
-        uneditable_color = new Color(235,235,235);
+        uneditable_color = new Color(235, 235, 235);
         List<String> config = new ArrayList<>();
         try {
             config = profile_deleter.readFromFile("profiledeleter.config");
-            for(String line : config) {
-                if(line.startsWith("show_tooltips=")) {
+            for (String line : config) {
+                if (line.startsWith("show_tooltips=")) {
                     show_tooltips = Boolean.parseBoolean(line.replace("show_tooltips=", ""));
-                } else if(line.startsWith("tooltip_delay_timer=")) {
-                    tooltip_delay_timer = Integer.parseInt(line.replace("tooltip_delay_timer=",""));
-                } else if(line.startsWith("tooltip_dismiss_timer=")) {
-                    tooltip_dismiss_timer = Integer.parseInt(line.replace("tooltip_dismiss_timer=",""));
+                } else if (line.startsWith("tooltip_delay_timer=")) {
+                    tooltip_delay_timer = Integer.parseInt(line.replace("tooltip_delay_timer=", ""));
+                } else if (line.startsWith("tooltip_dismiss_timer=")) {
+                    tooltip_dismiss_timer = Integer.parseInt(line.replace("tooltip_dismiss_timer=", ""));
                 }
             }
-        } catch(IOException e) {}
+        } catch (IOException e) {
+        }
 
         ToolTipManager.sharedInstance().setEnabled(show_tooltips);
         ToolTipManager.sharedInstance().setInitialDelay(tooltip_delay_timer);
         ToolTipManager.sharedInstance().setDismissDelay(tooltip_dismiss_timer);
-        
+
         // Configurations for the top level JFrame of the GUI.
         setMinimumSize(new Dimension(1150, 600));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -215,7 +216,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 };
             }
         };
-        updateTableData();
+        createTableData();
         results_scroll_pane = new JScrollPane(results_table);
         results_scroll_pane.setBorder(new LineBorder(Color.BLACK, 2));
         results_table_gc = new GridBagConstraints();
@@ -336,7 +337,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         delete_all_users_checkbox_gc.gridy = 0;
         delete_all_users_checkbox_gc.gridwidth = 1;
         delete_all_users_checkbox_gc.gridheight = 1;
-        
+
         // Initialisation of rerun checks button GUI element.
         rerun_checks_button = new JButton("Rerun Checks");
         rerun_checks_button.setToolTipText("Runs enabled checks. This button will only become active when a computer has been set");
@@ -386,7 +387,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         help_button_gc.gridy = 0;
         help_button_gc.gridwidth = 1;
         help_button_gc.gridheight = 1;
-        
+
         // Initialisation of show tooltips checkbox GUI element.
         tooltips_checkbox = new JCheckBox();
         tooltips_checkbox.setToolTipText("Turns tooltips on or off");
@@ -459,36 +460,14 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     }
 
     /**
-     * Refreshes the data in the results table JTable.
+     * Initialises the table model and populates the data for the results table.
      * <p>
-     * This needs to be run anytime the user list attribute is changed otherwise
-     * the data in the results table will be outdated.
+     * This needs to be run anytime the amount of users in the user list
+     * changes.
      */
-    private void updateTableData() {
+    private void createTableData() {
         results_table.getModel().removeTableModelListener(this);
-        results_table.setModel(new AbstractTableModel() {
-            private final String[] columnNames = UserData.headingsToStringArray();
-            private Object[][] rowData = profile_deleter.convertUserListTo2DObjectArray();
-            
-            @Override
-            public String getColumnName(int col) {
-                return columnNames[col];
-            }
-
-            @Override
-            public int getRowCount() {
-                return rowData.length;
-            }
-
-            @Override
-            public int getColumnCount() {
-                return columnNames.length;
-            }
-
-            @Override
-            public Object getValueAt(int row, int col) {
-                return rowData[row][col];
-            }
+        results_table.setModel(new DefaultTableModel(profile_deleter.convertUserListTo2DObjectArray(), UserData.headingsToStringArray()) {
 
             @Override
             public Class getColumnClass(int col) {
@@ -519,24 +498,14 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             public boolean isCellEditable(int row, int col) {
                 return col == 0 && getValueAt(row, 4) == "Editable" && !profile_deleter.getCannotDeleteList().contains(getValueAt(row, 1).toString().toLowerCase());
             }
-
-            @Override
-            public void setValueAt(Object value, int row, int col) {
-                rowData[row][col] = value;
-                fireTableCellUpdated(row, col);
-            }
-
-            public void setRowData(Object[][] row_data) {
-                rowData = row_data;
-            }
         });
-        // Determines how the last updated column should be displayed.
+        // Default renderer for table columns.
         TableCellRenderer default_renderer = new DefaultTableCellRenderer() {
 
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean is_selected, boolean has_focus, int row, int column) {
                 Component tableCellRendererComponent = super.getTableCellRendererComponent(table, value, is_selected, has_focus, row, column);
-                if((table.getModel().getValueAt(table.convertRowIndexToModel(row),4)).toString().equals("Uneditable")) {
+                if ((table.getModel().getValueAt(table.convertRowIndexToModel(row), 4)).toString().equals("Uneditable")) {
                     setBackground(uneditable_color);
                 } else {
                     setBackground(Color.WHITE);
@@ -552,11 +521,11 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             public void setValue(Object value) {
                 setText((value == null) ? "" : formatter.format(value));
             }
-            
+
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean is_selected, boolean has_focus, int row, int column) {
                 Component tableCellRendererComponent = super.getTableCellRendererComponent(table, value, is_selected, has_focus, row, column);
-                if((table.getModel().getValueAt(table.convertRowIndexToModel(row),4)).toString().equals("Uneditable")) {
+                if ((table.getModel().getValueAt(table.convertRowIndexToModel(row), 4)).toString().equals("Uneditable")) {
                     setBackground(uneditable_color);
                 } else {
                     setBackground(Color.WHITE);
@@ -579,7 +548,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             public Component getTableCellRendererComponent(JTable table, Object value, boolean is_selected, boolean has_focus, int row, int column) {
                 Component tableCellRendererComponent = super.getTableCellRendererComponent(table, value, is_selected, has_focus, row, column);
                 ((DefaultTableCellRenderer) tableCellRendererComponent).setHorizontalAlignment(DefaultTableCellRenderer.RIGHT);
-                if((table.getModel().getValueAt(table.convertRowIndexToModel(row),4)).toString().equals("Uneditable")) {
+                if ((table.getModel().getValueAt(table.convertRowIndexToModel(row), 4)).toString().equals("Uneditable")) {
                     setBackground(uneditable_color);
                 } else {
                     setBackground(Color.WHITE);
@@ -596,6 +565,32 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         results_table.getColumnModel().getColumn(6).setCellRenderer(default_renderer);
         results_table.setAutoCreateRowSorter(true);
         results_table.getModel().addTableModelListener(this);
+    }
+
+    /**
+     * Updates the data in the current table model for the results table.
+     * <p>
+     * This needs to be run anytime a change is made to the users in the current
+     * user list.
+     */
+    private void updateTableData() {
+        for (int i = 0; i < ((DefaultTableModel) results_table.getModel()).getRowCount(); i++) {
+            Object[] matching_user = null;
+            for (Object[] user : profile_deleter.convertUserListTo2DObjectArray()) {
+                if (user[1].toString().equals(results_table.getModel().getValueAt(i, 1).toString())) {
+                    matching_user = user;
+                    break;
+                }
+            }
+            if (matching_user != null) {
+                results_table.getModel().setValueAt(matching_user[0], i, 0);
+                results_table.getModel().setValueAt(matching_user[2], i, 2);
+                results_table.getModel().setValueAt(matching_user[3], i, 3);
+                results_table.getModel().setValueAt(matching_user[4], i, 4);
+                results_table.getModel().setValueAt(matching_user[5], i, 5);
+                results_table.getModel().setValueAt(matching_user[6], i, 6);
+            }
+        }
     }
 
     /**
@@ -809,8 +804,6 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         int column = e.getColumn();
         TableModel model = (TableModel) e.getSource();
         Object data = model.getValueAt(row, column);
-
-        profile_deleter.getUserList().get(row).setDelete(Boolean.parseBoolean(data.toString()));
     }
 
     /**
@@ -847,7 +840,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         @Override
         public void done() {
-            updateTableData();
+            createTableData();
             if (ping_success || (profile_deleter.getRemoteComputer() != null && !profile_deleter.getRemoteComputer().isEmpty())) {
                 rerun_checks_button.setEnabled(true);
             }
@@ -966,7 +959,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         @Override
         public void done() {
-            updateTableData();
+            createTableData();
             if (profile_deleter.getStateCheckComplete() && profile_deleter.getRegistryCheckComplete()) {
                 run_deletion_button.setEnabled(true);
             }
