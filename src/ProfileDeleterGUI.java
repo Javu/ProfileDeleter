@@ -1,5 +1,6 @@
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -86,6 +87,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
     public static void main(String args[]) {
         SwingUtilities.invokeLater(new Runnable() {
+            @Override
             public void run() {
                 try {
                     new ProfileDeleterGUI();
@@ -127,6 +129,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         // Initialisation of results table JTable GUI element.
         results_table = new JTable(new DefaultTableModel()) {
+            @Override
             public String getToolTipText(MouseEvent e) {
                 String tip = null;
                 java.awt.Point p = e.getPoint();
@@ -138,32 +141,39 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 TableModel model = getModel();
                 String editable = (String) model.getValueAt(realRowIndex, 4);
                 String name = (String) model.getValueAt(realRowIndex, 1);
-                if (realColumnIndex == 0) {
-                    if (profile_deleter.getCannotDeleteList().contains(name.toLowerCase())) {
-                        tip = "User is in the cannot delete list, you cannot delete users in this list";
-                    } else if (editable.compareTo("Uneditable") == 0) {
-                        tip = "Cannot delete if state is not Editable";
-                    } else if (profile_deleter.getShouldNotDeleteList().contains(name.toLowerCase())) {
-                        tip = "User is in the should not delete list. It is recommended you do not delete this account unless it is necessary";
-                    } else if (editable.compareTo("Editable") != 0) {
-                        tip = "Cannot delete if state is not Editable";
-                    }
-                } else if (realColumnIndex == 1) {
-                    if (profile_deleter.getCannotDeleteList().contains(name.toLowerCase())) {
-                        tip = "User is in the cannot delete list, you cannot delete users in this list";
-                    }
-                } else if (realColumnIndex == 4) {
-                    if (profile_deleter.getCannotDeleteList().contains(name.toLowerCase())) {
-                        tip = "User is in the cannot delete list, you cannot delete users in this list";
-                    } else if (editable.compareTo("Uneditable") == 0) {
-                        tip = "User may be logged in or PC may need to be restarted";
-                    }
+
+                switch (realColumnIndex) {
+                    case 0:
+                        if (profile_deleter.getCannotDeleteList().contains(name.toLowerCase())) {
+                            tip = "User is in the cannot delete list, you cannot delete users in this list";
+                        } else if (editable.compareTo("Uneditable") == 0) {
+                            tip = "Cannot delete if state is not Editable";
+                        } else if (profile_deleter.getShouldNotDeleteList().contains(name.toLowerCase())) {
+                            tip = "User is in the should not delete list. It is recommended you do not delete this account unless it is necessary";
+                        } else if (editable.compareTo("Editable") != 0) {
+                            tip = "Cannot delete if state is not Editable";
+                        }
+                        break;
+                    case 1:
+                        if (profile_deleter.getCannotDeleteList().contains(name.toLowerCase())) {
+                            tip = "User is in the cannot delete list, you cannot delete users in this list";
+                        }
+                        break;
+                    case 4:
+                        if (profile_deleter.getCannotDeleteList().contains(name.toLowerCase())) {
+                            tip = "User is in the cannot delete list, you cannot delete users in this list";
+                        } else if (editable.compareTo("Uneditable") == 0) {
+                            tip = "User may be logged in or PC may need to be restarted";
+                        }
+                        break;
                 }
                 return tip;
             }
 
+            @Override
             protected JTableHeader createDefaultTableHeader() {
                 return new JTableHeader(columnModel) {
+                    @Override
                     public String getToolTipText(MouseEvent e) {
                         String tip = null;
                         java.awt.Point p = e.getPoint();
@@ -193,6 +203,8 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         system_console_text_area.setMargin(new Insets(0, 2, 0, 0));
         system_console_scroll_pane = new JScrollPane(system_console_text_area);
         system_console_scroll_pane.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
+            // If the scrollbar is at the very bottom it will auto scroll as new text is added, if it is not at the very bottom it will stay in its current position.
+            @Override
             public void adjustmentValueChanged(AdjustmentEvent e) {
                 if (system_console_scrollbar_previous_maximum - (system_console_scroll_pane.getViewport().getViewPosition().y + system_console_scroll_pane.getViewport().getViewRect().height) <= 1) {
                     e.getAdjustable().setValue(e.getAdjustable().getMaximum());
@@ -214,7 +226,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         // Initialisation of computer name input field GUI element.
         computer_name_text_field = new JTextField();
-        computer_name_text_field.setActionCommand("setComputer");
+        computer_name_text_field.setActionCommand("SetComputer");
         computer_name_text_field.addActionListener(this);
         computer_name_gc = new GridBagConstraints();
         computer_name_gc.fill = GridBagConstraints.BOTH;
@@ -227,7 +239,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         // Initialisation of set computer button GUI element.
         set_computer_button = new JButton("Set Computer");
-        set_computer_button.setActionCommand("setComputer");
+        set_computer_button.setActionCommand("SetComputer");
         set_computer_button.addActionListener(this);
         set_computer_gc = new GridBagConstraints();
         set_computer_gc.fill = GridBagConstraints.BOTH;
@@ -314,7 +326,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         // Initialisation of write log button GUI element.
         write_log_button = new JButton("Write Log");
-        write_log_button.setActionCommand("writeLog");
+        write_log_button.setActionCommand("WriteLog");
         write_log_button.addActionListener(this);
         write_log_gc = new GridBagConstraints();
         write_log_gc.fill = GridBagConstraints.BOTH;
@@ -398,25 +410,30 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     private void updateTableData() {
         results_table.getModel().removeTableModelListener(this);
         results_table.setModel(new AbstractTableModel() {
-            private String[] columnNames = UserData.headingsToStringArray();
+            private final String[] columnNames = UserData.headingsToStringArray();
             private Object[][] rowData = profile_deleter.convertUserListTo2DObjectArray();
 
+            @Override
             public String getColumnName(int col) {
-                return columnNames[col].toString();
+                return columnNames[col];
             }
 
+            @Override
             public int getRowCount() {
                 return rowData.length;
             }
 
+            @Override
             public int getColumnCount() {
                 return columnNames.length;
             }
 
+            @Override
             public Object getValueAt(int row, int col) {
                 return rowData[row][col];
             }
 
+            @Override
             public Class getColumnClass(int col) {
                 String class_name = "";
                 switch (col) {
@@ -441,14 +458,12 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 return null;
             }
 
+            @Override
             public boolean isCellEditable(int row, int col) {
-                if (col == 0 && getValueAt(row, 4) == "Editable" && !profile_deleter.getCannotDeleteList().contains(getValueAt(row, 1).toString().toLowerCase())) {
-                    return true;
-                } else {
-                    return false;
-                }
+                return col == 0 && getValueAt(row, 4) == "Editable" && !profile_deleter.getCannotDeleteList().contains(getValueAt(row, 1).toString().toLowerCase());
             }
 
+            @Override
             public void setValueAt(Object value, int row, int col) {
                 rowData[row][col] = value;
                 fireTableCellUpdated(row, col);
@@ -461,17 +476,26 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         TableCellRenderer date_renderer = new DefaultTableCellRenderer() {
             DateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 
+            @Override
             public void setValue(Object value) {
                 setText((value == null) ? "" : formatter.format(value));
             }
         };
         TableCellRenderer size_renderer = new DefaultTableCellRenderer() {
+            @Override
             public void setValue(Object value) {
                 String output = "";
                 if (value != null && !value.toString().isEmpty()) {
                     output = doubleToFormattedString(Double.parseDouble(value.toString()) / (1024.0 * 1024.0)) + " MB";
                 }
                 setText(output);
+            }
+
+            @Override
+            public Component getTableCellRendererComponent(JTable arg0, Object arg1, boolean arg2, boolean arg3, int arg4, int arg5) {
+                Component tableCellRendererComponent = super.getTableCellRendererComponent(arg0, arg1, arg2, arg3, arg4, arg5);
+                ((DefaultTableCellRenderer) tableCellRendererComponent).setHorizontalAlignment(DefaultTableCellRenderer.RIGHT);
+                return tableCellRendererComponent;
             }
         };
         results_table.getColumnModel().getColumn(2).setCellRenderer(date_renderer);
@@ -483,33 +507,47 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     /**
      * Overridden ActionListener function that runs the relevant functions based
      * on GUI elements pressed.
+     *
+     * @param e ActionEvent received from UI elements
      */
     @Override
     public void actionPerformed(ActionEvent e) {
-        if ("LogWritten" == e.getActionCommand()) {
-            if (system_console_text_area != null) {
-                writeLogToSystemConsole();
-            }
-        } else if ("setComputer" == e.getActionCommand()) {
-            setComputerButton();
-        } else if ("RerunChecks" == e.getActionCommand()) {
-            rerunChecksButton();
-        } else if ("RunDeletion" == e.getActionCommand()) {
-            runDeletionButton();
-        } else if ("writeLog" == e.getActionCommand()) {
-            writeLogButton();
-        } else if ("SizeCheckToggle" == e.getActionCommand()) {
-            sizeCheckCheckbox();
-        } else if ("StateCheckToggle" == e.getActionCommand()) {
-            stateCheckCheckbox();
-        } else if ("RegistryCheckToggle" == e.getActionCommand()) {
-            registryCheckCheckbox();
-        } else if ("DeleteAllUsersToggle" == e.getActionCommand()) {
-            deleteAllUsersCheckbox();
-        } else if ("Help" == e.getActionCommand()) {
-            helpButton();
-        } else if ("Exit" == e.getActionCommand()) {
-            exitButton();
+        switch (e.getActionCommand()) {
+            case "LogWritten":
+                if (system_console_text_area != null) {
+                    writeLogToSystemConsole();
+                }
+                break;
+            case "SetComputer":
+                setComputerButton();
+                break;
+            case "RerunChecks":
+                rerunChecksButton();
+                break;
+            case "RunDeletion":
+                runDeletionButton();
+                break;
+            case "WriteLog":
+                writeLogButton();
+                break;
+            case "SizeCheckToggle":
+                sizeCheckCheckbox();
+                break;
+            case "StateCheckToggle":
+                stateCheckCheckbox();
+                break;
+            case "RegistryCheckToggle":
+                registryCheckCheckbox();
+                break;
+            case "DeleteAllUsersToggle":
+                deleteAllUsersCheckbox();
+                break;
+            case "Help":
+                helpButton();
+                break;
+            case "Exit":
+                exitButton();
+                break;
         }
     }
 
@@ -664,6 +702,8 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
      * Overridden from TableModelListener.
      * <p>
      * Used to track changes to the results table JTable.
+     *
+     * @param e the event detailing the change in table model
      */
     @Override
     public void tableChanged(TableModelEvent e) {
