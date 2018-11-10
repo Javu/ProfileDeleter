@@ -473,6 +473,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 rowData = row_data;
             }
         });
+        // Determines how the last updated column should be displayed.
         TableCellRenderer date_renderer = new DefaultTableCellRenderer() {
             DateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 
@@ -481,6 +482,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 setText((value == null) ? "" : formatter.format(value));
             }
         };
+        // Determines how the size column should be displayed.
         TableCellRenderer size_renderer = new DefaultTableCellRenderer() {
             @Override
             public void setValue(Object value) {
