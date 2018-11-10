@@ -84,7 +84,7 @@ public class ProfileDeleter {
         WARNING(1),
         ERROR(2);
 
-        private int state;
+        private final int state;
 
         LOG_TYPE(int new_state) {
             state = new_state;
@@ -97,6 +97,8 @@ public class ProfileDeleter {
 
     /**
      * Constructor for ProfileDeleter class.
+     * 
+     * @throws UnrecoverableException if a configuration file cannot be loaded
      */
     public ProfileDeleter() throws UnrecoverableException {
         this(null);
@@ -114,6 +116,8 @@ public class ProfileDeleter {
      *
      * @param log_updated the ActonListener to notify that the log has been
      * updated
+     * 
+     * @throws UnrecoverableException if a configuration file cannot be loaded
      */
     public ProfileDeleter(ActionListener log_updated) throws UnrecoverableException {
         remote_computer = "";
@@ -323,7 +327,7 @@ public class ProfileDeleter {
         this.delete_all_users = delete_all_users;
         if (user_list != null && !user_list.isEmpty() && state_check_complete) {
             for (UserData user : user_list) {
-                if (!cannot_delete_list.contains(user.getName().toLowerCase()) && !should_not_delete_list.contains(user.getName().toLowerCase()) && user.getState() == "Editable") {
+                if (!cannot_delete_list.contains(user.getName().toLowerCase()) && !should_not_delete_list.contains(user.getName().toLowerCase()) && user.getState().compareTo("Editable") == 0) {
                     user.setDelete(this.delete_all_users);
                 }
             }
@@ -630,8 +634,8 @@ public class ProfileDeleter {
     public List<String> processDeletion() throws NotInitialisedException {
         logMessage("Attempting to run deletion on users list", LOG_TYPE.INFO, true);
         if (user_list != null && !user_list.isEmpty() && state_check_complete && registry_check_complete) {
-            ArrayList<UserData> new_folders = new ArrayList<UserData>();
-            ArrayList<String> deleted_folders = new ArrayList<String>();
+            ArrayList<UserData> new_folders = new ArrayList<>();
+            ArrayList<String> deleted_folders = new ArrayList<>();
             deleted_folders.add("User" + '\t' + "Folder Deleted?" + '\t' + "Registry SID Deleted?" + '\t' + "Registry GUID Deleted?");
             for (UserData user : user_list) {
                 if (user.getDelete()) {
@@ -641,7 +645,7 @@ public class ProfileDeleter {
                         directoryDelete(users_directory + user.getName());
                         deleted_user += "Yes" + '\t';
                         logMessage("Successfully deleted user directory for " + user.getName(), LOG_TYPE.INFO, true);
-                    } catch (IOException | CannotEditException e) {
+                    } catch (IOException | CannotEditException | InterruptedException e) {
                         String message = "Failed to delete user directory " + user.getName() + ". Error is " + e.getMessage();
                         deleted_user += message + '\t';
                         logMessage(message, LOG_TYPE.ERROR, true);
@@ -934,18 +938,18 @@ public class ProfileDeleter {
                 ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-Command", command);
                 builder.redirectErrorStream(true);
                 Process power_shell_process = builder.start();
-                BufferedReader powershell_process_output_stream = new BufferedReader(new InputStreamReader(power_shell_process.getInputStream()));
-                String output = "";
-                String line = "";
-                while ((line = powershell_process_output_stream.readLine()).compareTo("EndOfScriptGetDirectoryList") != 0) {
-                    if (!line.isEmpty()) {
-                        logMessage("Discovered folder details " + line, LOG_TYPE.INFO, true);
-                        String[] line_split = line.split("\\t");
-                        UserData user = new UserData(false, line_split[0], line_split[1], "", "", "", "");
-                        user_list.add(user);
+                try (BufferedReader powershell_process_output_stream = new BufferedReader(new InputStreamReader(power_shell_process.getInputStream()))) {
+                    String output = "";
+                    String line = "";
+                    while ((line = powershell_process_output_stream.readLine()).compareTo("EndOfScriptGetDirectoryList") != 0) {
+                        if (!line.isEmpty()) {
+                            logMessage("Discovered folder details " + line, LOG_TYPE.INFO, true);
+                            String[] line_split = line.split("\\t");
+                            UserData user = new UserData(false, line_split[0], line_split[1], "", "", "", "");
+                            user_list.add(user);
+                        }
                     }
                 }
-                powershell_process_output_stream.close();
                 power_shell_process.destroy();
                 logMessage("Successfully built users directory " + users_directory, LOG_TYPE.INFO, true);
             } catch (IOException e) {
@@ -996,8 +1000,9 @@ public class ProfileDeleter {
      *
      * @throws IOException an IO error occurs when trying to check the editable
      * state of users in user list attribute
+     * @throws InterruptedException the cmd process thread was interrupted
      */
-    public void checkState() throws IOException {
+    public void checkState() throws IOException, InterruptedException {
         logMessage("Checking editable state of directory list", LOG_TYPE.INFO, true);
         if (user_list.size() > 0 && users_directory.compareTo("") != 0) {
             for (int i = 0; i < user_list.size(); i++) {
@@ -1022,7 +1027,7 @@ public class ProfileDeleter {
                     logMessage(message + ". User may be logged in or PC may need to be restarted", LOG_TYPE.WARNING, true);
                     user_list.get(i).setState(message);
                     user_list.get(i).setDelete(false);
-                } catch (IOException e) {
+                } catch (IOException | InterruptedException e) {
                     logMessage("Editable state check has failed", LOG_TYPE.ERROR, true);
                     logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
                     throw e;
@@ -1070,8 +1075,9 @@ public class ProfileDeleter {
      *
      * @throws IOException an IO error occurs when trying to check the editable
      * state of users in user list attribute
+     * @throws InterruptedException the cmd process thread for checkState was interrupted
      */
-    public void checkAll() throws IOException {
+    public void checkAll() throws IOException, InterruptedException {
         logMessage("Running all enabled checks", LOG_TYPE.INFO, true);
         if (size_check) {
             checkSize();
@@ -1123,7 +1129,7 @@ public class ProfileDeleter {
             try {
                 directoryCreate(sessions_location + "\\" + remote_computer + "_" + session_id);
                 local_data_directory = sessions_location + "\\" + remote_computer + "_" + session_id;
-            } catch (IOException | CannotEditException e) {
+            } catch (IOException | CannotEditException | InterruptedException e) {
                 String message = "Unable to create local data directory " + sessions_location + "\\" + remote_computer + "_" + session_id;
                 logMessage(message, LOG_TYPE.ERROR, true);
                 throw new CannotEditException(message);
@@ -1155,26 +1161,29 @@ public class ProfileDeleter {
      * @param folder_renamed the name to rename the folder to
      * @throws IOException an IO error occurs when trying to rename the folder
      * @throws CannotEditException unable to rename the folder
+     * @throws InterruptedException the pstools process thread was interrupted
      */
-    public void directoryRename(String computer, String directory, String folder, String folder_renamed) throws IOException, CannotEditException {
+    public void directoryRename(String computer, String directory, String folder, String folder_renamed) throws IOException, CannotEditException , InterruptedException {
         try {
             logMessage("Attempting to rename folder " + directory + folder + " to " + folder_renamed, LOG_TYPE.INFO, true);
+            String line = "";
+            String error = "";
             String command = pstools_location + "\\psexec /accepteula \\\\" + computer + " cmd /c REN \"" + directory + folder + "\" \"" + folder_renamed + "\" && echo editable|| echo uneditable";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);
-            Process cmd_process = builder.start();
-            BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()));
-            String line = "";
-            String error = "";
-            while ((line = cmd_process_output_stream.readLine()) != null) {
-                error = line;
+            Process pstools_process = builder.start();
+            try (BufferedReader pstools_process_output_stream = new BufferedReader(new InputStreamReader(pstools_process.getInputStream()))) {
+                while ((line = pstools_process_output_stream.readLine()) != null) {
+                    error = line;
+                }
             }
+            pstools_process.waitFor();
             if (error.compareTo("editable") != 0) {
                 String message = "Unable to rename folder " + directory + folder + ". Error is: " + error;
                 throw new CannotEditException(message);
             }
             logMessage("Successfully renamed folder " + directory + folder + " to " + folder_renamed, LOG_TYPE.INFO, true);
-        } catch (CannotEditException | IOException e) {
+        } catch (CannotEditException | IOException | InterruptedException e) {
             logMessage("Could not rename directory " + directory + folder, LOG_TYPE.WARNING, true);
             logMessage(e.getMessage(), LOG_TYPE.WARNING, true);
             throw e;
@@ -1200,15 +1209,16 @@ public class ProfileDeleter {
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-command", command);
             builder.redirectErrorStream(true);
             Process power_shell_process = builder.start();
-            BufferedReader powershell_process_output_stream = new BufferedReader(new InputStreamReader(power_shell_process.getInputStream()));
-            String output = "";
-            String line = "";
-            while ((line = powershell_process_output_stream.readLine()).compareTo("EndOfScriptGetFolderSize") != 0) {
-                if (!line.isEmpty()) {
-                    output = line;
+            String output;
+            try (BufferedReader powershell_process_output_stream = new BufferedReader(new InputStreamReader(power_shell_process.getInputStream()))) {
+                output = "";
+                String line = "";
+                while ((line = powershell_process_output_stream.readLine()).compareTo("EndOfScriptGetFolderSize") != 0) {
+                    if (!line.isEmpty()) {
+                        output = line;
+                    }
                 }
             }
-            powershell_process_output_stream.close();
             power_shell_process.destroy();
             if (Pattern.matches("[0-9]+", output)) {
                 logMessage("Successfully calculated filesize for folder " + users_directory + user + ": " + output, LOG_TYPE.INFO, true);
@@ -1234,27 +1244,30 @@ public class ProfileDeleter {
      * @throws IOException an IO error has occurred when running process to
      * create the folder
      * @throws CannotEditException unable to create the folder
+     * @throws InterruptedException the cmd process thread was interrupted
      */
-    public void directoryCreate(String directory) throws IOException, CannotEditException {
+    public void directoryCreate(String directory) throws IOException, CannotEditException, InterruptedException {
         try {
             logMessage("Attempting to create folder " + directory, LOG_TYPE.INFO, true);
+            String line = "";
+            String error = "";
             String command = "MKDIR \"" + directory + "\"";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);
             Process cmd_process = builder.start();
-            BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()));
-            String line = "";
-            String error = "";
-            while ((line = cmd_process_output_stream.readLine()) != null) {
-                error = line;
+            try (BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()))) {
+                while ((line = cmd_process_output_stream.readLine()) != null) {
+                    error = line;
+                }
             }
+            cmd_process.waitFor();
             if (error.compareTo("") != 0) {
                 String message = "Folder " + directory + " already exists. Error is: " + error;
                 logMessage(message, LOG_TYPE.WARNING, true);
                 throw new CannotEditException(message);
             }
             logMessage("Successfully created folder " + directory, LOG_TYPE.INFO, true);
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             logMessage("Could not create folder " + directory, LOG_TYPE.ERROR, true);
             logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
@@ -1272,27 +1285,30 @@ public class ProfileDeleter {
      * @throws IOException an IO error has occurred when running process to
      * delete the folder
      * @throws CannotEditException unable to delete the folder
+     * @throws InterruptedException the cmd process thread was interrupted
      */
-    public void directoryDelete(String directory) throws IOException, CannotEditException {
+    public void directoryDelete(String directory) throws IOException, CannotEditException, InterruptedException {
         try {
             logMessage("Attempting to delete folder " + directory, LOG_TYPE.INFO, true);
+            String line = "";
+            String error = "";
             String command = "RMDIR /S /Q \"" + directory + "\"";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);
             Process cmd_process = builder.start();
-            BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()));
-            String line = "";
-            String error = "";
-            while ((line = cmd_process_output_stream.readLine()) != null) {
-                error = line;
+            try (BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()))) {
+                while ((line = cmd_process_output_stream.readLine()) != null) {
+                    error = line;
+                }
             }
+            cmd_process.waitFor();
             if (error.compareTo("") != 0) {
                 String message = "Unable to delete folder " + directory + ". Error is: " + error;
                 logMessage(message, LOG_TYPE.ERROR, true);
                 throw new CannotEditException(message);
             }
             logMessage("Successfully deleted folder " + directory, LOG_TYPE.INFO, true);
-        } catch (CannotEditException | IOException e) {
+        } catch (CannotEditException | IOException | InterruptedException e) {
             logMessage("Could not delete folder " + directory, LOG_TYPE.ERROR, true);
             logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
@@ -1311,8 +1327,9 @@ public class ProfileDeleter {
      * @throws IOException an IO error occurred when attempting to delete the
      * files
      * @throws CannotEditException unable to delete files
+     * @throws InterruptedException the cmd process thread was interrupted
      */
-    public void directoryDeleteFiles(String directory, List<String> files, List<String> do_not_delete) throws IOException, CannotEditException {
+    public void directoryDeleteFiles(String directory, List<String> files, List<String> do_not_delete) throws IOException, CannotEditException, InterruptedException {
         try {
             logMessage("Attempting to delete list of files in directory " + directory, LOG_TYPE.INFO, true);
             for (String file : files) {
@@ -1326,15 +1343,18 @@ public class ProfileDeleter {
                 }
                 if (delete) {
                     String command = "del \"" + directory + "\\" + file + "\"";
+                    String line = "";
+                    String error = "";
                     ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
                     builder.redirectErrorStream(true);
                     Process cmd_process = builder.start();
-                    BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()));
-                    String line = "";
-                    String error = "";
-                    while ((line = cmd_process_output_stream.readLine()) != null) {
-                        error = line;
+                    try (BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()))) {
+                        while ((line = cmd_process_output_stream.readLine()) != null) {
+                            error = line;
+                        }
+                        
                     }
+                    cmd_process.waitFor();
                     if (error.compareTo("") != 0) {
                         String message = "Unable to delete file " + directory + "\\" + file + ". Error is: " + error;
                         logMessage(message, LOG_TYPE.ERROR, true);
@@ -1345,7 +1365,7 @@ public class ProfileDeleter {
                     logMessage("File " + directory + "\\" + file + " is in do not delete list. It has not been deleted", LOG_TYPE.INFO, true);
                 }
             }
-        } catch (CannotEditException | IOException e) {
+        } catch (CannotEditException | IOException | InterruptedException e) {
             logMessage("Failed to delete all requested files in directory " + directory, LOG_TYPE.ERROR, true);
             logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
@@ -1361,24 +1381,27 @@ public class ProfileDeleter {
      * @throws IOException an IO error occurred when getting the list of files
      * @throws CannotEditException unable to read filenames from the designated
      * folder
+     * @throws InterruptedException the cmd process thread was interrupted
      */
-    public List<String> directoryListFiles(String directory) throws IOException, CannotEditException {
+    public List<String> directoryListFiles(String directory) throws IOException, CannotEditException, InterruptedException {
         try {
             logMessage("Attempting to get list of files in directory " + directory, LOG_TYPE.INFO, true);
+            List<String> files = new ArrayList<>();
+            String line = "";
+            String error = "";
             String command = "dir /b /a-d \"" + directory + "\"";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);
             Process cmd_process = builder.start();
-            BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()));
-            List<String> files = new ArrayList<String>();
-            String line = "";
-            String error = "";
-            while ((line = cmd_process_output_stream.readLine()) != null) {
-                if (line.compareTo("") != 0) {
-                    files.add(line);
+            try (BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()))) {
+                while ((line = cmd_process_output_stream.readLine()) != null) {
+                    if (line.compareTo("") != 0) {
+                        files.add(line);
+                    }
+                    error = line;
                 }
-                error = line;
             }
+            cmd_process.waitFor();
             if (error.compareTo("") != 0) {
                 String message = "Unable to get list of files in diectory " + directory + ". Error is: " + error;
                 logMessage(message, LOG_TYPE.ERROR, true);
@@ -1387,41 +1410,8 @@ public class ProfileDeleter {
                 logMessage("Successfully got list of files in directory " + directory, LOG_TYPE.INFO, true);
                 return files;
             }
-        } catch (CannotEditException | IOException e) {
+        } catch (CannotEditException | IOException | InterruptedException e) {
             logMessage("Could not get list of files in directory " + directory, LOG_TYPE.ERROR, true);
-            logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
-            throw e;
-        }
-    }
-
-    /**
-     * Delete a single file.
-     *
-     * @param full_file_name the path + name of the file
-     * @throws IOException an IO error occurred when trying to delete the file
-     * @throws CannotEditException unable to delete the file
-     */
-    public void fileDelete(String full_file_name) throws IOException, CannotEditException {
-        try {
-            logMessage("Attempting to delete file " + full_file_name, LOG_TYPE.INFO, true);
-            String command = "del \"" + full_file_name + "\"";
-            ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
-            builder.redirectErrorStream(true);
-            Process cmd_process = builder.start();
-            BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()));
-            String line = "";
-            String error = "";
-            while ((line = cmd_process_output_stream.readLine()) != null) {
-                error = line;
-            }
-            if (error.compareTo("") != 0) {
-                String message = "Unable to delete file " + full_file_name + ". Error is: " + error;
-                logMessage(message, LOG_TYPE.ERROR, true);
-                throw new CannotEditException(message);
-            }
-            logMessage("Successfully deleted file " + full_file_name, LOG_TYPE.INFO, true);
-        } catch (CannotEditException | IOException e) {
-            logMessage("Could not delete file " + full_file_name, LOG_TYPE.ERROR, true);
             logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
         }
@@ -1435,27 +1425,30 @@ public class ProfileDeleter {
      * @param new_directory the folder to copy the file to
      * @throws IOException an IO error occurred when copying the file
      * @throws CannotEditException unable to copy the file
+     * @throws InterruptedException the cmd process thread was interrupted
      */
-    public void fileCopy(String old_full_file_name, String new_directory) throws IOException, CannotEditException {
+    public void fileCopy(String old_full_file_name, String new_directory) throws IOException, CannotEditException, InterruptedException {
         try {
             logMessage("Attempting to copy file " + old_full_file_name + " to new directory " + new_directory, LOG_TYPE.INFO, true);
+            String line = "";
+            String error = "";
             String command = "copy \"" + old_full_file_name + "\" \"" + new_directory + "\"";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);
             Process cmd_process = builder.start();
-            BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()));
-            String line = "";
-            String error = "";
-            while ((line = cmd_process_output_stream.readLine()) != null) {
-                error = line;
+            try (BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()))) {
+                while ((line = cmd_process_output_stream.readLine()) != null) {
+                    error = line;
+                }
             }
+            cmd_process.waitFor();
             if (!error.contains("file(s) copied")) {
                 String message = "Unable to copy file " + old_full_file_name + " to folder " + new_directory + ". Error is: " + error;
                 logMessage(message, LOG_TYPE.ERROR, true);
                 throw new CannotEditException(message);
             }
             logMessage("Successfully copied file " + old_full_file_name + " to new directory " + new_directory, LOG_TYPE.INFO, true);
-        } catch (CannotEditException | IOException e) {
+        } catch (CannotEditException | IOException | InterruptedException e) {
             logMessage("Could not copy file " + old_full_file_name + " to new directory " + new_directory, LOG_TYPE.ERROR, true);
             logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
@@ -1478,16 +1471,17 @@ public class ProfileDeleter {
     public void registryBackup(String computer, String reg_key, String full_file_name) throws IOException, CannotEditException, InterruptedException {
         try {
             logMessage("Attempting to backup registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name, LOG_TYPE.INFO, true);
+            String line = "";
+            String error = "";
+            boolean run = true;
             String command = "REG QUERY \"\\\\" + computer + "\\" + reg_key + "\" /s > \"" + full_file_name + "\"";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);
             Process cmd_process = builder.start();
-            BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()));
-            String line = "";
-            String error = "";
-            boolean run = true;
-            while ((line = cmd_process_output_stream.readLine()) != null && run) {
-                error = line;
+            try (BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()))) {
+                while ((line = cmd_process_output_stream.readLine()) != null && run) {
+                    error = line;
+                }
             }
             cmd_process.waitFor();
             if (error.compareTo("") != 0) {
@@ -1517,8 +1511,8 @@ public class ProfileDeleter {
             String command = pstools_location + "\\psexec /accepteula \\\\" + computer + " REG DELETE \"" + reg_key + "\" /f";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);
-            Process cmd_process = builder.start();
-            cmd_process.waitFor();
+            Process pstools_process = builder.start();
+            pstools_process.waitFor();
             logMessage("Successfully deleted registry key " + reg_key + " from computer " + computer, LOG_TYPE.INFO, true);
         } catch (IOException | InterruptedException e) {
             logMessage("Could not delete registry key " + reg_key + " from computer " + computer, LOG_TYPE.ERROR, true);
@@ -1809,7 +1803,7 @@ public class ProfileDeleter {
      * @throws IOException an IO error occurred when trying to read the file
      */
     public List<String> readFromFile(String filename) throws IOException {
-        List<String> read_data = new ArrayList<String>();
+        List<String> read_data = new ArrayList<>();
         try {
             File file = new File(filename);
             try (BufferedReader br = new BufferedReader(new FileReader(file))) {
@@ -1852,15 +1846,15 @@ public class ProfileDeleter {
         try {
             int count = 0;
             File file = new File(filename);
-            BufferedWriter writer = new BufferedWriter(new FileWriter(file, append));
-            for (String string_line : write_to_file) {
-                if (count > 0) {
-                    writer.newLine();
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(file, append))) {
+                for (String string_line : write_to_file) {
+                    if (count > 0) {
+                        writer.newLine();
+                    }
+                    writer.write(string_line);
+                    count++;
                 }
-                writer.write(string_line);
-                count++;
             }
-            writer.close();
         } catch (IOException e) {
             throw e;
         }
