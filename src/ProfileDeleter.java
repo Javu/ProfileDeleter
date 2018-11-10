@@ -67,6 +67,8 @@ public class ProfileDeleter {
     private String reports_location;
     private String sessions_location;
     private String src_location;
+    private int state_check_attempts;
+    private int registry_check_attempts;
     private boolean size_check;
     private boolean state_check;
     private boolean registry_check;
@@ -97,7 +99,7 @@ public class ProfileDeleter {
 
     /**
      * Constructor for ProfileDeleter class.
-     * 
+     *
      * @throws UnrecoverableException if a configuration file cannot be loaded
      */
     public ProfileDeleter() throws UnrecoverableException {
@@ -116,7 +118,7 @@ public class ProfileDeleter {
      *
      * @param log_updated the ActonListener to notify that the log has been
      * updated
-     * 
+     *
      * @throws UnrecoverableException if a configuration file cannot be loaded
      */
     public ProfileDeleter(ActionListener log_updated) throws UnrecoverableException {
@@ -133,9 +135,11 @@ public class ProfileDeleter {
         reports_location = "";
         sessions_location = "";
         src_location = "";
+        state_check_attempts = 0;
+        registry_check_attempts = 0;
         size_check = false;
-        state_check = true;
-        registry_check = true;
+        state_check = false;
+        registry_check = false;
         size_check_complete = false;
         state_check_complete = false;
         registry_check_complete = false;
@@ -240,6 +244,34 @@ public class ProfileDeleter {
     public void setSrcLocation(String src_location) {
         this.src_location = src_location;
         logMessage("Src location set to " + src_location, LOG_TYPE.INFO, true);
+    }
+
+    /**
+     * Sets the state check attempts attribute.
+     * <p>
+     * The number of times a state check should be rerun before determining a
+     * failure.
+     *
+     * @param state_check_attempts the number of times a state check should be
+     * rerun before determining a failure
+     */
+    public void setStateCheckAttempts(int state_check_attempts) {
+        this.state_check_attempts = state_check_attempts;
+        logMessage("State check attempts set to " + state_check_attempts, LOG_TYPE.INFO, true);
+    }
+
+    /**
+     * Sets the registry check attempts attribute.
+     * <p>
+     * The number of times a registry query should be rerun before determining a
+     * failure.
+     *
+     * @param registry_check_attempts the number of times a registry query
+     * should be rerun before determining a failure
+     */
+    public void setRegistryCheckAttempts(int registry_check_attempts) {
+        this.registry_check_attempts = registry_check_attempts;
+        logMessage("Registry check attempts set to " + registry_check_attempts, LOG_TYPE.INFO, true);
     }
 
     /**
@@ -473,6 +505,32 @@ public class ProfileDeleter {
     }
 
     /**
+     * Gets the state check attempts attribute.
+     * <p>
+     * The number of times a state check should be rerun before determining a
+     * failure.
+     *
+     * @return the number of times a state check should be rerun before
+     * determining a failure
+     */
+    public int getStateCheckAttempts() {
+        return state_check_attempts;
+    }
+
+    /**
+     * Gets the registry check attempts attribute.
+     * <p>
+     * The number of times a registry query should be rerun before determining a
+     * failure.
+     *
+     * @return the number of times a registry query should be rerun before
+     * determining a failure
+     */
+    public int getRegistryCheckAttempts() {
+        return registry_check_attempts;
+    }
+
+    /**
      * Gets the size check attribute.
      *
      * @return whether to run a size check or not
@@ -603,7 +661,7 @@ public class ProfileDeleter {
             String[] calendar_fields = last_updated_to_calendar.split("/");
             Calendar last_updated_as_calendar = Calendar.getInstance();
             last_updated_as_calendar.set(Integer.parseInt(calendar_fields[2]), Integer.parseInt(calendar_fields[0]), Integer.parseInt(calendar_fields[1]), Integer.parseInt(calendar_fields[3]), Integer.parseInt(calendar_fields[4]), Integer.parseInt(calendar_fields[5]));
-            */
+             */
             try {
                 Date last_updated_to_date = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss").parse(object_array[i][2].toString());
                 object_array[i][2] = last_updated_to_date;
@@ -685,7 +743,7 @@ public class ProfileDeleter {
             }
             user_list = new_folders;
             logMessage("Completed deletions", LOG_TYPE.INFO, true);
-            if(deleted_folders.size() > 1) {
+            if (deleted_folders.size() > 1) {
                 try {
                     writeToFile(reports_location + "\\" + getRemoteComputer() + "_deletion_report_" + session_id + ".txt", deleted_folders);
                     logMessage("Deletion report written to file " + reports_location + "\\" + getRemoteComputer() + "_deletion_report_" + session_id + ".txt", LOG_TYPE.INFO, true);
@@ -732,80 +790,36 @@ public class ProfileDeleter {
             throw new NotInitialisedException(message);
         } else {
             String filename_friendly_computer = remote_computer.replace('.', '_');
-            int count = 0;
+            int count = 1;
             boolean run = true;
             while (run) {
-                /*
                 try {
-                    registryBackup(remote_computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList", local_as_remote_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg");
+                    registryQuery(remote_computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList", local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg");
                     run = false;
                 } catch (IOException | InterruptedException | CannotEditException e) {
-                    if (count > 29) {
+                    if (count >= registry_check_attempts) {
                         throw e;
                     } else {
-                        logMessage("Attempt " + Integer.toString(count + 1) + " at backing up registry key failed", LOG_TYPE.WARNING, true);
+                        logMessage("Attempt " + Integer.toString(count) + " at backing up registry key failed", LOG_TYPE.WARNING, true);
                         count++;
                     }
-                }*/
-                try {
-                    registryBackup(remote_computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList", local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg");
-                    run = false;
-                } catch (IOException | InterruptedException | CannotEditException e) {
-                    if (count > 29) {
-                        throw e;
-                    } else {
-                        logMessage("Attempt " + Integer.toString(count + 1) + " at backing up registry key failed", LOG_TYPE.WARNING, true);
-                        count++;
-                    }
-                }/*
-                try {
-                    registryBackup(remote_computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList", "C:\\temp\\Profile_Deleter\\" + session_id + "\\" + filename_friendly_computer + "_ProfileList.reg");
-                    run = false;
-                } catch (IOException | InterruptedException | CannotEditException e) {
-                    if (count > 29) {
-                        throw e;
-                    } else {
-                        logMessage("Attempt " + Integer.toString(count + 1) + " at backing up registry key failed", LOG_TYPE.WARNING, true);
-                        count++;
-                    }
-                }*/
+                }
             }
             run = true;
-            count = 0;
+            count = 1;
             while (run) {
                 try {
-                    registryBackup(remote_computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid", local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg");
+                    registryQuery(remote_computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid", local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg");
                     run = false;
                 } catch (IOException | InterruptedException | CannotEditException e) {
-                    if (count > 29) {
+                    if (count >= registry_check_attempts) {
                         throw e;
                     } else {
-                        logMessage("Attempt " + Integer.toString(count + 1) + " at backing up registry key failed", LOG_TYPE.WARNING, true);
+                        logMessage("Attempt " + Integer.toString(count) + " at backing up registry key failed", LOG_TYPE.WARNING, true);
                         count++;
                     }
-                }/*
-                try {
-                    registryBackup(remote_computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid", "C:\\temp\\Profile_Deleter\\" + session_id + "\\" + filename_friendly_computer + "_ProfileGuid.reg");
-                    run = false;
-                } catch (IOException | InterruptedException | CannotEditException e) {
-                    if (count > 29) {
-                        throw e;
-                    } else {
-                        logMessage("Attempt " + Integer.toString(count + 1) + " at backing up registry key failed", LOG_TYPE.WARNING, true);
-                        count++;
-                    }
-                }*/
-            }/*
-            try {
-                fileCopy(remote_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg", local_data_directory);
-            } catch (IOException | CannotEditException e) {
-                throw e;
+                }
             }
-            try {
-                fileCopy(remote_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg", local_data_directory);
-            } catch (IOException | CannotEditException e) {
-                throw e;
-            }*/
         }
     }
 
@@ -843,8 +857,8 @@ public class ProfileDeleter {
                     int count = 0;
                     logMessage("Processing file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg", LOG_TYPE.INFO, true);
                     for (String line : regkeys_profile_list) {
-                        line = line.replace(" ","");
-                        line = line.replace("\t","");
+                        line = line.replace(" ", "");
+                        line = line.replace("\t", "");
                         if (line.startsWith("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\WindowsNT\\CurrentVersion\\ProfileList\\") || count == regkeys_profile_list.size() - 1) {
                             String new_sid = line.replace("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\WindowsNT\\CurrentVersion\\ProfileList\\", "");
                             logMessage("Found new SID " + new_sid, LOG_TYPE.INFO, true);
@@ -852,7 +866,7 @@ public class ProfileDeleter {
                                 logMessage("Processing details for found profile " + profile_path, LOG_TYPE.INFO, true);
                                 boolean found_user = false;
                                 for (UserData user : user_list) {
-                                    if (user.getName().toLowerCase().compareTo(profile_path.toLowerCase().replace("c:\\users\\","")) == 0) {
+                                    if (user.getName().toLowerCase().compareTo(profile_path.toLowerCase().replace("c:\\users\\", "")) == 0) {
                                         found_user = true;
                                         logMessage("Found matching user account", LOG_TYPE.INFO, true);
                                         if (!user.getSid().isEmpty()) {
@@ -867,7 +881,7 @@ public class ProfileDeleter {
                                                     }
                                                 } else if (found_guid) {
                                                     String sid = guid.replace(" ", "");
-                                                    sid = sid.replace("\t","");
+                                                    sid = sid.replace("\t", "");
                                                     sid = sid.replace("SidStringREG_SZ", "");
                                                     if (sid.compareTo(current_sid) == 0) {
                                                         logMessage("New SID details match SID details for GUID, replacing user details with new details. SID set to " + current_sid + " and GUID to " + profile_guid, LOG_TYPE.INFO, true);
@@ -1010,12 +1024,33 @@ public class ProfileDeleter {
                 logMessage("Checking editable state of folder " + user, LOG_TYPE.INFO, true);
                 try {
                     if (!cannot_delete_list.contains(user.toLowerCase())) {
-                        directoryRename(remote_computer, "C:\\users\\", user, user);
-                        user_list.get(i).setState("Editable");
-                        if (delete_all_users && !should_not_delete_list.contains(user.toLowerCase())) {
-                            user_list.get(i).setDelete(true);
-                        } else {
-                            user_list.get(i).setDelete(false);
+                        int count = 1;
+                        boolean run = true;
+                        while (run) {
+                            if (count > 1) {
+                                logMessage("Attempt " + count + " at checking state for user " + user, LOG_TYPE.INFO, true);
+                            }
+                            try {
+                                directoryRename(remote_computer, "C:\\users\\", user, user);
+                                user_list.get(i).setState("Editable");
+                                if (delete_all_users && !should_not_delete_list.contains(user.toLowerCase())) {
+                                    user_list.get(i).setDelete(true);
+                                } else {
+                                    user_list.get(i).setDelete(false);
+                                }
+                                run = false;
+                                logMessage("User " + user + " determined to be editable", LOG_TYPE.INFO, true);
+                            } catch (CannotEditException e) {
+                                if (count >= state_check_attempts) {
+                                    user_list.get(i).setDelete(false);
+                                    logMessage("User " + user + " determined to be uneditable, all attempts have failed, state set to uneditable", LOG_TYPE.INFO, true);
+                                    run = false;
+                                    throw e;
+                                } else {
+                                    count++;
+                                    logMessage("User " + user + " determined to be uneditable, running state check again", LOG_TYPE.INFO, true);
+                                }
+                            }
                         }
                     } else {
                         user_list.get(i).setState("Uneditable");
@@ -1075,7 +1110,8 @@ public class ProfileDeleter {
      *
      * @throws IOException an IO error occurs when trying to check the editable
      * state of users in user list attribute
-     * @throws InterruptedException the cmd process thread for checkState was interrupted
+     * @throws InterruptedException the cmd process thread for checkState was
+     * interrupted
      */
     public void checkAll() throws IOException, InterruptedException {
         logMessage("Running all enabled checks", LOG_TYPE.INFO, true);
@@ -1163,7 +1199,7 @@ public class ProfileDeleter {
      * @throws CannotEditException unable to rename the folder
      * @throws InterruptedException the pstools process thread was interrupted
      */
-    public void directoryRename(String computer, String directory, String folder, String folder_renamed) throws IOException, CannotEditException , InterruptedException {
+    public void directoryRename(String computer, String directory, String folder, String folder_renamed) throws IOException, CannotEditException, InterruptedException {
         try {
             logMessage("Attempting to rename folder " + directory + folder + " to " + folder_renamed, LOG_TYPE.INFO, true);
             String line = "";
@@ -1352,7 +1388,7 @@ public class ProfileDeleter {
                         while ((line = cmd_process_output_stream.readLine()) != null) {
                             error = line;
                         }
-                        
+
                     }
                     cmd_process.waitFor();
                     if (error.compareTo("") != 0) {
@@ -1468,9 +1504,9 @@ public class ProfileDeleter {
      * to create the backup file
      * @throws InterruptedException the cmd process thread was interrupted
      */
-    public void registryBackup(String computer, String reg_key, String full_file_name) throws IOException, CannotEditException, InterruptedException {
+    public void registryQuery(String computer, String reg_key, String full_file_name) throws IOException, CannotEditException, InterruptedException {
         try {
-            logMessage("Attempting to backup registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name, LOG_TYPE.INFO, true);
+            logMessage("Attempting to save registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name, LOG_TYPE.INFO, true);
             String line = "";
             String error = "";
             boolean run = true;
@@ -1485,13 +1521,13 @@ public class ProfileDeleter {
             }
             cmd_process.waitFor();
             if (error.compareTo("") != 0) {
-                String message = "Could not backup registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name;
+                String message = "Could not save registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name;
                 logMessage(message, LOG_TYPE.ERROR, true);
                 throw new CannotEditException(message);
             }
-            logMessage("Successfully backed up registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name, LOG_TYPE.INFO, true);
+            logMessage("Successfully saved up registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name, LOG_TYPE.INFO, true);
         } catch (IOException | InterruptedException e) {
-            logMessage("Could not backup registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name + ". Error is " + e.getMessage(), LOG_TYPE.ERROR, true);
+            logMessage("Could not save registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name + ". Error is " + e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
         }
     }
@@ -1551,8 +1587,8 @@ public class ProfileDeleter {
             String size_in_megabytes_long_string = Long.toString(size_in_megaytes_long);
             String size_in_megabytes_string = "";
             int count = 0;
-            for(int i = size_in_megabytes_long_string.length()-1; i < 0; i--) {
-                if(count == 2) {
+            for (int i = size_in_megabytes_long_string.length() - 1; i < 0; i--) {
+                if (count == 2) {
                     size_in_megabytes_string += ",";
                     count = 0;
                 }
@@ -1681,16 +1717,24 @@ public class ProfileDeleter {
     }
 
     /**
-     * Loads the profiledelete.config file.
+     * Loads the profiledeleter.config file.
      * <p>
      * This file contains configuration information for the ProfileDeleter
-     * class.
+     * class.<br>
      * It specifies where the various data folders are located and populates the
-     * cannot delete list and should not delete list attributes.
+     * cannot delete list and should not delete list attributes.<br>
+     * If the profiledeleter.config file is missing one of the folder location
+     * paths it will instead attempt to run the profiledeleter.config.default
+     * file.<br>
+     * If the profiledeleter.config.default file is missing one of the folder
+     * location paths it will attempt to recreate the file.<br>
+     * If it fails to recreate the profiledeleter.config.default file it will
+     * throw an UnrecoverableException.
      *
      *
      * @throws UnrecoverableException if the profiledeleter.config file cannot
-     * be loaded or is incomplete
+     * be loaded or the profiledeleter.config.default file cannot be loaded or
+     * cannot be recreated in the case it is incomplete
      */
     public void loadConfigFile() throws UnrecoverableException {
         logMessage("Attempting to load a configuration file", LOG_TYPE.INFO, true);
@@ -1704,6 +1748,12 @@ public class ProfileDeleter {
             reports_location = "";
             sessions_location = "";
             src_location = "";
+            size_check = false;
+            state_check = false;
+            registry_check = false;
+            delete_all_users = false;
+            state_check_attempts = 0;
+            registry_check_attempts = 0;
             cannot_delete_list = new ArrayList<>();
             should_not_delete_list = new ArrayList<>();
             try {
@@ -1725,6 +1775,18 @@ public class ProfileDeleter {
                         sessions_location = line.replace("sessions=", "");
                     } else if (line.startsWith("src=")) {
                         src_location = line.replace("src=", "");
+                    } else if (line.startsWith("size_check_default=")) {
+                        size_check = (Boolean.parseBoolean(line.replace("size_check_default=", "")));
+                    } else if (line.startsWith("state_check_default=")) {
+                        state_check = (Boolean.parseBoolean(line.replace("state_check_default=", "")));
+                    } else if (line.startsWith("registry_check_default=")) {
+                        registry_check = (Boolean.parseBoolean(line.replace("registry_check_default=", "")));
+                    } else if (line.startsWith("delete_all_users_default=")) {
+                        delete_all_users = (Boolean.parseBoolean(line.replace("delete_all_users_default=", "")));
+                    } else if (line.startsWith("state_check_attempts=")) {
+                        state_check_attempts = (Integer.parseInt(line.replace("state_check_attempts=", "")));
+                    } else if (line.startsWith("registry_check_attempts=")) {
+                        registry_check_attempts = (Integer.parseInt(line.replace("registry_check_attempts=", "")));
                     } else if (line.startsWith("cannot_delete_list=")) {
                         cannot_delete_list.add(line.replace("cannot_delete_list=", ""));
                     } else if (line.startsWith("should_not_delete_list=")) {
@@ -1747,6 +1809,12 @@ public class ProfileDeleter {
                             profile_deleter_config_default.add("reports=.\\\\reports");
                             profile_deleter_config_default.add("sessions=.\\\\sessions");
                             profile_deleter_config_default.add("src=.\\\\src");
+                            profile_deleter_config_default.add("size_check_default=false");
+                            profile_deleter_config_default.add("state_check_default=true");
+                            profile_deleter_config_default.add("registry_check_default=true");
+                            profile_deleter_config_default.add("delete_all_users_default=false");
+                            profile_deleter_config_default.add("state_check_attempts=10");
+                            profile_deleter_config_default.add("registry_check_attempts=30");
                             profile_deleter_config_default.add("cannot_delete_list=public");
                             profile_deleter_config_default.add("should_not_delete_list=administrator");
                             profile_deleter_config_default.add("should_not_delete_list=intranet");

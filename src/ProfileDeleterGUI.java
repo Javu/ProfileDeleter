@@ -250,7 +250,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         // Initialisation of size check checkbox GUI element.
         size_check_checkbox = new JCheckBox();
-        size_check_checkbox.setSelected(false);
+        size_check_checkbox.setSelected(profile_deleter.getSizeCheck());
         size_check_checkbox.setText("Size Check");
         size_check_checkbox.setActionCommand("SizeCheckToggle");
         size_check_checkbox.addActionListener(this);
@@ -263,7 +263,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         // Initialisation of state check checkbox GUI element.
         state_check_checkbox = new JCheckBox();
-        state_check_checkbox.setSelected(true);
+        state_check_checkbox.setSelected(profile_deleter.getStateCheck());
         state_check_checkbox.setText("State Check");
         state_check_checkbox.setActionCommand("StateCheckToggle");
         state_check_checkbox.addActionListener(this);
@@ -276,7 +276,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         // Initialisation of registry check checkbox GUI element.
         registry_check_checkbox = new JCheckBox();
-        registry_check_checkbox.setSelected(true);
+        registry_check_checkbox.setSelected(profile_deleter.getRegistryCheck());
         registry_check_checkbox.setText("Registry Check");
         registry_check_checkbox.setActionCommand("RegistryCheckToggle");
         registry_check_checkbox.addActionListener(this);
@@ -301,7 +301,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         // Initialisation of delete all users checkbox GUI element.
         delete_all_users_checkbox = new JCheckBox();
-        delete_all_users_checkbox.setSelected(false);
+        delete_all_users_checkbox.setSelected(profile_deleter.getDeleteAllUsers());
         delete_all_users_checkbox.setText("Delete All");
         delete_all_users_checkbox.setActionCommand("DeleteAllUsersToggle");
         delete_all_users_checkbox.addActionListener(this);
