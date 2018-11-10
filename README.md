@@ -8,8 +8,6 @@ Should work on Windows 7 and higher versions.
 
 To do:
 
-* More tooltips.
-* Fix formatting for size and date columns.
 * Different colour for undeletable rows.
 
 Bugs:

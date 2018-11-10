@@ -1813,6 +1813,9 @@ public class ProfileDeleter {
                             profile_deleter_config_default.add("state_check_default=true");
                             profile_deleter_config_default.add("registry_check_default=true");
                             profile_deleter_config_default.add("delete_all_users_default=false");
+                            profile_deleter_config_default.add("show_tooltips=true");
+                            profile_deleter_config_default.add("tooltip_delay_timer=0");
+                            profile_deleter_config_default.add("tooltip_dismiss_timer=60000");
                             profile_deleter_config_default.add("state_check_attempts=10");
                             profile_deleter_config_default.add("registry_check_attempts=30");
                             profile_deleter_config_default.add("cannot_delete_list=public");
@@ -1844,6 +1847,15 @@ public class ProfileDeleter {
                         profile_deleter_config_default.add("reports=.\\\\reports");
                         profile_deleter_config_default.add("sessions=.\\\\sessions");
                         profile_deleter_config_default.add("src=.\\\\src");
+                        profile_deleter_config_default.add("size_check_default=false");
+                        profile_deleter_config_default.add("state_check_default=true");
+                        profile_deleter_config_default.add("registry_check_default=true");
+                        profile_deleter_config_default.add("delete_all_users_default=false");
+                        profile_deleter_config_default.add("show_tooltips=true");
+                        profile_deleter_config_default.add("tooltip_delay_timer=0");
+                        profile_deleter_config_default.add("tooltip_dismiss_timer=60000");
+                        profile_deleter_config_default.add("state_check_attempts=10");
+                        profile_deleter_config_default.add("registry_check_attempts=30");
                         profile_deleter_config_default.add("cannot_delete_list=public");
                         profile_deleter_config_default.add("should_not_delete_list=administrator");
                         profile_deleter_config_default.add("should_not_delete_list=intranet");
