@@ -694,49 +694,73 @@ public class ProfileDeleter {
         if (user_list != null && !user_list.isEmpty() && state_check_complete && registry_check_complete) {
             ArrayList<UserData> new_folders = new ArrayList<>();
             ArrayList<String> deleted_folders = new ArrayList<>();
-            deleted_folders.add("User" + '\t' + "Folder Deleted?" + '\t' + "Registry SID Deleted?" + '\t' + "Registry GUID Deleted?");
+            deleted_folders.add("Deleted Successfully?" + '\t' + "Folder Deleted?" + '\t' + "SID Deleted?" + '\t' + "GUID Deleted?" + '\t' + "User" + '\t' + "SID" + '\t' + "GUID");
             for (UserData user : user_list) {
                 if (user.getDelete()) {
                     logMessage("User " + user.getName() + " is flagged for deletion", LOG_TYPE.INFO, true);
-                    String deleted_user = user.getName() + '\t';
+                    boolean folder_delete = false;
+                    boolean sid_delete = false;
+                    boolean guid_delete = false;
+                    String deleted_user_success = "";
+                    String deleted_user_folder_success = "";
+                    String deleted_user_sid_success = "";
+                    String deleted_user_guid_success = "";
+                    
+                    //String deleted_user = user.getName() + '\t';
                     try {
                         directoryDelete(users_directory + user.getName());
-                        deleted_user += "Yes" + '\t';
+                        deleted_user_folder_success = "Yes";
+                        //deleted_user += "Yes" + '\t';
+                        folder_delete = true;
                         logMessage("Successfully deleted user directory for " + user.getName(), LOG_TYPE.INFO, true);
                     } catch (IOException | CannotEditException | InterruptedException e) {
                         String message = "Failed to delete user directory " + user.getName() + ". Error is " + e.getMessage();
-                        deleted_user += message + '\t';
+                        deleted_user_folder_success = message;
+                        //deleted_user += message + '\t';
                         logMessage(message, LOG_TYPE.ERROR, true);
                     }
                     try {
                         if (user.getSid().compareTo("") != 0) {
                             registryDelete(remote_computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\" + user.getSid());
-                            deleted_user += "Yes " + user.getSid() + '\t';
+                            deleted_user_sid_success = "Yes";
+                            //deleted_user += "Yes " + user.getSid() + '\t';
                             logMessage("Successfully deleted SID " + user.getSid() + " for user " + user.getName(), LOG_TYPE.INFO, true);
                         } else {
-                            deleted_user += "SID is blank" + '\t';
+                            deleted_user_sid_success = "SID is blank";
+                            //deleted_user += "SID is blank" + '\t';
                             logMessage("SID for user " + user.getName() + " is blank", LOG_TYPE.WARNING, true);
                         }
+                        sid_delete = true;
                     } catch (IOException | InterruptedException e) {
                         String message = "Failed to delete user SID " + user.getSid() + " from registry. Error is " + e.getMessage();
-                        deleted_user += message + '\t';
+                        deleted_user_sid_success = message;
+                        //deleted_user += message + '\t';
                         logMessage(message, LOG_TYPE.ERROR, true);
                     }
                     try {
                         if (user.getGuid().compareTo("") != 0) {
                             registryDelete(remote_computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid\\" + user.getGuid());
-                            deleted_user += "Yes " + user.getGuid();
+                            deleted_user_guid_success = "Yes";
+                            //deleted_user += "Yes " + user.getGuid();
                             logMessage("Successfully deleted GUID " + user.getGuid() + " for user " + user.getName(), LOG_TYPE.INFO, true);
                         } else {
-                            deleted_user += "GUID is blank";
+                            deleted_user_guid_success = "GUID is blank";
+                            //deleted_user += "GUID is blank";
                             logMessage("GUID for user " + user.getName() + " is blank", LOG_TYPE.WARNING, true);
                         }
+                        guid_delete = true;
                     } catch (IOException | InterruptedException e) {
                         String message = "Failed to delete user GUID " + user.getGuid() + " from registry. Error is " + e.getMessage();
-                        deleted_user += message;
+                        deleted_user_guid_success = message;
+                        //deleted_user += message;
                         logMessage(message, LOG_TYPE.ERROR, true);
                     }
-                    deleted_folders.add(deleted_user);
+                    if(folder_delete && sid_delete && guid_delete) {
+                        deleted_user_success = "Yes";
+                    } else {
+                        deleted_user_success = "No";
+                    }
+                    deleted_folders.add(deleted_user_success + '\t' + deleted_user_folder_success + '\t' + deleted_user_sid_success + '\t' + deleted_user_guid_success + '\t' + user.getName() + '\t' + user.getSid() + '\t' + user.getGuid());
                 } else {
                     new_folders.add(user);
                 }
@@ -1035,8 +1059,6 @@ public class ProfileDeleter {
                                 user_list.get(i).setState("Editable");
                                 if (delete_all_users && !should_not_delete_list.contains(user.toLowerCase())) {
                                     user_list.get(i).setDelete(true);
-                                } else {
-                                    user_list.get(i).setDelete(false);
                                 }
                                 run = false;
                                 logMessage("User " + user + " determined to be editable", LOG_TYPE.INFO, true);

@@ -566,6 +566,25 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 return tableCellRendererComponent;
             }
         };
+        // Determines how the delete column should be displayed.
+        TableCellRenderer boolean_renderer = new DefaultTableCellRenderer() {
+            JCheckBox checkbox = new JCheckBox();
+
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean is_selected, boolean has_focus, int row, int column) {
+                //Component tableCellRendererComponent = super.getTableCellRendererComponent(table, value, is_selected, has_focus, row, column);
+                if (value instanceof Boolean) {
+                    checkbox.setSelected((Boolean)value);
+                }
+                if ((table.getModel().getValueAt(table.convertRowIndexToModel(row), 4)).toString().equals("Uneditable")) {
+                    checkbox.setBackground(uneditable_color);
+                } else {
+                    checkbox.setBackground(Color.WHITE);
+                }
+                checkbox.setHorizontalAlignment(CENTER);
+                return checkbox;
+            }
+        };
         // Determines how the last updated column should be displayed.
         TableCellRenderer date_renderer = new DefaultTableCellRenderer() {
             DateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
@@ -609,7 +628,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 return tableCellRendererComponent;
             }
         };
-        results_table.getColumnModel().getColumn(0).setCellRenderer(default_renderer);
+        results_table.getColumnModel().getColumn(0).setCellRenderer(boolean_renderer);
         results_table.getColumnModel().getColumn(1).setCellRenderer(default_renderer);
         results_table.getColumnModel().getColumn(2).setCellRenderer(date_renderer);
         results_table.getColumnModel().getColumn(3).setCellRenderer(size_renderer);
@@ -853,6 +872,10 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         int column = e.getColumn();
         TableModel model = (TableModel) e.getSource();
         Object data = model.getValueAt(row, column);
+        
+        if(column == 0) {
+            profile_deleter.getUserList().get(row).setDelete(Boolean.parseBoolean(data.toString()));
+        }
     }
 
     /**
