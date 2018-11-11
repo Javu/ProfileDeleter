@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JDialog;
 import javax.swing.JEditorPane;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -26,7 +25,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
-import javax.swing.JWindow;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
@@ -96,6 +94,10 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     private JEditorPane help_frame_editor_pane;
     private JScrollPane help_frame_scroll_pane;
     private HTMLEditorKit help_frame_html_editor_kit;
+    private JFrame deletion_report_frame;
+    private JEditorPane deletion_report_frame_editor_pane;
+    private JScrollPane deletion_report_frame_scroll_pane;
+    private HTMLEditorKit deletion_report_html_editor_kit;
 
     /**
      * SwingWorker threads for GUI.
@@ -135,7 +137,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         tooltip_dismiss_timer = 60000;
         help_location = "";
         uneditable_color = new Color(235, 235, 235);
-        
+
         // Loads the GUI Configuration settings from the profiledeleter.config file.
         List<String> config = new ArrayList<>();
         try {
@@ -152,9 +154,9 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                     try {
                         List<String> help_text_array = profile_deleter.readFromFile(help_location + "\\profile_deleter_help.html");
                         int count = 1;
-                        for(String help_text_line : help_text_array) {
+                        for (String help_text_line : help_text_array) {
                             help_text += help_text_line;
-                            if(count < help_text_array.size()) {
+                            if (count < help_text_array.size()) {
                                 help_text += '\n';
                             }
                             count++;
@@ -164,7 +166,8 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                     }
                 }
             }
-        } catch (IOException e) {}
+        } catch (IOException e) {
+        }
 
         // Configuration of tooltip settings
         ToolTipManager.sharedInstance().setEnabled(show_tooltips);
@@ -450,7 +453,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         help_frame_editor_pane.setContentType("text/html");
         try {
             File help_file = new File(help_location + "\\profile_deleter_help.html");
-            if(!help_file.exists()) {
+            if (!help_file.exists()) {
                 throw new IOException("Help file does not exist");
             }
             help_frame_editor_pane.setPage((new File(help_location + "\\profile_deleter_help.html").toURI().toURL()));
@@ -466,7 +469,22 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         help_frame.setMinimumSize(new Dimension(1200, 600));
         help_frame.pack();
         help_frame.setVisible(false);
-        
+
+        // Initialisation of deletion report display GUI element.
+        deletion_report_frame = new JFrame("Deletion Report");
+        deletion_report_frame_editor_pane = new JEditorPane();
+        deletion_report_frame_editor_pane.setEditable(false);
+        deletion_report_frame_editor_pane.setContentType("text/html");
+        deletion_report_html_editor_kit = new HTMLEditorKit();
+        deletion_report_frame_editor_pane.setEditorKit(deletion_report_html_editor_kit);
+        deletion_report_frame_editor_pane.setDocument(deletion_report_html_editor_kit.createDefaultDocument());
+        deletion_report_frame_scroll_pane = new JScrollPane(deletion_report_frame_editor_pane);
+        deletion_report_frame.getContentPane().add(deletion_report_frame_scroll_pane);
+        deletion_report_frame.setDefaultCloseOperation(HIDE_ON_CLOSE);
+        deletion_report_frame.setMinimumSize(new Dimension(1200, 600));
+        deletion_report_frame.pack();
+        deletion_report_frame.setVisible(false);
+
         // Add all GUI elements to top level JFrame and display the GUI.
         getContentPane().add(computer_name_text_field, computer_name_text_field_gc);
         getContentPane().add(set_computer_button, set_computer_button_gc);
@@ -574,7 +592,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             public Component getTableCellRendererComponent(JTable table, Object value, boolean is_selected, boolean has_focus, int row, int column) {
                 //Component tableCellRendererComponent = super.getTableCellRendererComponent(table, value, is_selected, has_focus, row, column);
                 if (value instanceof Boolean) {
-                    checkbox.setSelected((Boolean)value);
+                    checkbox.setSelected((Boolean) value);
                 }
                 if ((table.getModel().getValueAt(table.convertRowIndexToModel(row), 4)).toString().equals("Uneditable")) {
                     checkbox.setBackground(uneditable_color);
@@ -860,6 +878,44 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     }
 
     /**
+     * Converts the deletion report from ProfileDeleter into a HTML String and
+     * displays it in the deletion report JFrame.
+     *
+     * @param deletion_report the deletion report returned from ProfileDeleter
+     * after a deletion is processed
+     */
+    private void displayDeletionReport(List<String> deletion_report) {
+        String html_deletion_report = "<html>" + '\n';
+        html_deletion_report += "<head>" + '\n';
+        html_deletion_report += "</head>" + '\n';
+        html_deletion_report += "<body>" + '\n';
+        html_deletion_report += "<h1>Deletion Report</h1>" + '\n';
+        html_deletion_report += "<p><b>Computer:</b>" + '\t' + profile_deleter.getRemoteComputer() + "</p>" + '\n';
+        html_deletion_report += "<table>" + '\n';
+        int count = 0;
+        for (String line : deletion_report) {
+            String[] split_line = line.split("\t");
+            html_deletion_report += "<tr>";
+            for (String line_part : split_line) {
+                if(count > 0) {
+                    html_deletion_report += "<td>";
+                    if (count == 1) {
+                        html_deletion_report += "<b>" + line_part + "</b>";
+                    } else {
+                        html_deletion_report += line_part;
+                    }
+                    html_deletion_report += "</td>";
+                }
+            }
+            html_deletion_report += "</tr>" + '\n';
+            count++;
+        }
+        html_deletion_report += "</table>" + '\n';
+        deletion_report_frame_editor_pane.setText(html_deletion_report);
+        deletion_report_frame.setVisible(true);
+    }
+
+    /**
      * Overridden from TableModelListener.
      * <p>
      * Used to track changes to the results table JTable.
@@ -872,8 +928,8 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         int column = e.getColumn();
         TableModel model = (TableModel) e.getSource();
         Object data = model.getValueAt(row, column);
-        
-        if(column == 0) {
+
+        if (column == 0) {
             profile_deleter.getUserList().get(row).setDelete(Boolean.parseBoolean(data.toString()));
         }
     }
@@ -1013,6 +1069,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 for (String deleted_user : deleted_users) {
                     system_console_text_area.append('\n' + deleted_user);
                 }
+                displayDeletionReport(deleted_users);
                 if (profile_deleter.getSizeCheckComplete()) {
                     double total_size = 0.0;
                     for (UserData user : profile_deleter.getUserList()) {

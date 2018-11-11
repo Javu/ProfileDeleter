@@ -694,7 +694,7 @@ public class ProfileDeleter {
         if (user_list != null && !user_list.isEmpty() && state_check_complete && registry_check_complete) {
             ArrayList<UserData> new_folders = new ArrayList<>();
             ArrayList<String> deleted_folders = new ArrayList<>();
-            deleted_folders.add("Deleted Successfully?" + '\t' + "Folder Deleted?" + '\t' + "SID Deleted?" + '\t' + "GUID Deleted?" + '\t' + "User" + '\t' + "SID" + '\t' + "GUID");
+            deleted_folders.add("User" + '\t' + "Deleted Successfully?" + '\t' + "Folder Deleted?" + '\t' + "SID Deleted?" + '\t' + "GUID Deleted?" + '\t' + "SID" + '\t' + "GUID");
             for (UserData user : user_list) {
                 if (user.getDelete()) {
                     logMessage("User " + user.getName() + " is flagged for deletion", LOG_TYPE.INFO, true);
@@ -705,54 +705,44 @@ public class ProfileDeleter {
                     String deleted_user_folder_success = "";
                     String deleted_user_sid_success = "";
                     String deleted_user_guid_success = "";
-                    
-                    //String deleted_user = user.getName() + '\t';
                     try {
                         directoryDelete(users_directory + user.getName());
                         deleted_user_folder_success = "Yes";
-                        //deleted_user += "Yes" + '\t';
                         folder_delete = true;
                         logMessage("Successfully deleted user directory for " + user.getName(), LOG_TYPE.INFO, true);
                     } catch (IOException | CannotEditException | InterruptedException e) {
                         String message = "Failed to delete user directory " + user.getName() + ". Error is " + e.getMessage();
                         deleted_user_folder_success = message;
-                        //deleted_user += message + '\t';
                         logMessage(message, LOG_TYPE.ERROR, true);
                     }
                     try {
                         if (user.getSid().compareTo("") != 0) {
                             registryDelete(remote_computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\" + user.getSid());
                             deleted_user_sid_success = "Yes";
-                            //deleted_user += "Yes " + user.getSid() + '\t';
                             logMessage("Successfully deleted SID " + user.getSid() + " for user " + user.getName(), LOG_TYPE.INFO, true);
                         } else {
                             deleted_user_sid_success = "SID is blank";
-                            //deleted_user += "SID is blank" + '\t';
                             logMessage("SID for user " + user.getName() + " is blank", LOG_TYPE.WARNING, true);
                         }
                         sid_delete = true;
                     } catch (IOException | InterruptedException e) {
                         String message = "Failed to delete user SID " + user.getSid() + " from registry. Error is " + e.getMessage();
                         deleted_user_sid_success = message;
-                        //deleted_user += message + '\t';
                         logMessage(message, LOG_TYPE.ERROR, true);
                     }
                     try {
                         if (user.getGuid().compareTo("") != 0) {
                             registryDelete(remote_computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid\\" + user.getGuid());
                             deleted_user_guid_success = "Yes";
-                            //deleted_user += "Yes " + user.getGuid();
                             logMessage("Successfully deleted GUID " + user.getGuid() + " for user " + user.getName(), LOG_TYPE.INFO, true);
                         } else {
                             deleted_user_guid_success = "GUID is blank";
-                            //deleted_user += "GUID is blank";
                             logMessage("GUID for user " + user.getName() + " is blank", LOG_TYPE.WARNING, true);
                         }
                         guid_delete = true;
                     } catch (IOException | InterruptedException e) {
                         String message = "Failed to delete user GUID " + user.getGuid() + " from registry. Error is " + e.getMessage();
                         deleted_user_guid_success = message;
-                        //deleted_user += message;
                         logMessage(message, LOG_TYPE.ERROR, true);
                     }
                     if(folder_delete && sid_delete && guid_delete) {
@@ -760,7 +750,7 @@ public class ProfileDeleter {
                     } else {
                         deleted_user_success = "No";
                     }
-                    deleted_folders.add(deleted_user_success + '\t' + deleted_user_folder_success + '\t' + deleted_user_sid_success + '\t' + deleted_user_guid_success + '\t' + user.getName() + '\t' + user.getSid() + '\t' + user.getGuid());
+                    deleted_folders.add(user.getName() + '\t' + deleted_user_success + '\t' + deleted_user_folder_success + '\t' + deleted_user_sid_success + '\t' + deleted_user_guid_success + '\t' + user.getSid() + '\t' + user.getGuid());
                 } else {
                     new_folders.add(user);
                 }
@@ -769,10 +759,10 @@ public class ProfileDeleter {
             logMessage("Completed deletions", LOG_TYPE.INFO, true);
             if (deleted_folders.size() > 1) {
                 try {
-                    writeToFile(reports_location + "\\" + getRemoteComputer() + "_deletion_report_" + session_id + ".txt", deleted_folders);
-                    logMessage("Deletion report written to file " + reports_location + "\\" + getRemoteComputer() + "_deletion_report_" + session_id + ".txt", LOG_TYPE.INFO, true);
+                    writeToFile(reports_location + "\\" + remote_computer + "_deletion_report_" + session_id + ".txt", deleted_folders);
+                    logMessage("Deletion report written to file " + reports_location + "\\" + remote_computer + "_deletion_report_" + session_id + ".txt", LOG_TYPE.INFO, true);
                 } catch (IOException e) {
-                    logMessage("Failed to write deletion report to file " + reports_location + "\\" + getRemoteComputer() + "_deletion_report_" + session_id + ".txt. Error is: " + e.getMessage(), LOG_TYPE.ERROR, true);
+                    logMessage("Failed to write deletion report to file " + reports_location + "\\" + remote_computer + "_deletion_report_" + session_id + ".txt. Error is: " + e.getMessage(), LOG_TYPE.ERROR, true);
                 }
             }
             return deleted_folders;
