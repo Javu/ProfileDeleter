@@ -95,9 +95,13 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     private JScrollPane help_frame_scroll_pane;
     private HTMLEditorKit help_frame_html_editor_kit;
     private JFrame deletion_report_frame;
-    private JEditorPane deletion_report_frame_editor_pane;
+    private JLabel deletion_report_frame_heading_label;
+    private GridBagConstraints deletion_report_frame_heading_label_gc;
+    private JLabel deletion_report_frame_computer_label;
+    private GridBagConstraints deletion_report_frame_computer_label_gc;
+    private JTable deletion_report_frame_table;
     private JScrollPane deletion_report_frame_scroll_pane;
-    private HTMLEditorKit deletion_report_html_editor_kit;
+    private GridBagConstraints deletion_report_frame_scroll_pane_gc;
 
     /**
      * SwingWorker threads for GUI.
@@ -472,14 +476,28 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         // Initialisation of deletion report display GUI element.
         deletion_report_frame = new JFrame("Deletion Report");
-        deletion_report_frame_editor_pane = new JEditorPane();
-        deletion_report_frame_editor_pane.setEditable(false);
-        deletion_report_frame_editor_pane.setContentType("text/html");
-        deletion_report_html_editor_kit = new HTMLEditorKit();
-        deletion_report_frame_editor_pane.setEditorKit(deletion_report_html_editor_kit);
-        deletion_report_frame_editor_pane.setDocument(deletion_report_html_editor_kit.createDefaultDocument());
-        deletion_report_frame_scroll_pane = new JScrollPane(deletion_report_frame_editor_pane);
-        deletion_report_frame.getContentPane().add(deletion_report_frame_scroll_pane);
+        deletion_report_frame.getContentPane().setLayout(new GridBagLayout());
+        deletion_report_frame_heading_label = new JLabel("Deletion Report");
+        deletion_report_frame_heading_label_gc = new GridBagConstraints();
+        deletion_report_frame_heading_label_gc.fill = GridBagConstraints.BOTH;
+        deletion_report_frame_heading_label_gc.gridx = 0;
+        deletion_report_frame_heading_label_gc.gridy = 0;
+        deletion_report_frame_computer_label = new JLabel();
+        deletion_report_frame_computer_label_gc = new GridBagConstraints();
+        deletion_report_frame_computer_label_gc.fill = GridBagConstraints.BOTH;
+        deletion_report_frame_computer_label_gc.gridx = 0;
+        deletion_report_frame_computer_label_gc.gridy = 1;
+        deletion_report_frame_table = new JTable();
+        deletion_report_frame_scroll_pane = new JScrollPane(deletion_report_frame_table);
+        deletion_report_frame_scroll_pane_gc = new GridBagConstraints();
+        deletion_report_frame_scroll_pane_gc.fill = GridBagConstraints.BOTH;
+        deletion_report_frame_scroll_pane_gc.gridx = 0;
+        deletion_report_frame_scroll_pane_gc.gridy = 2;
+        deletion_report_frame_scroll_pane_gc.weightx = 1;
+        deletion_report_frame_scroll_pane_gc.weighty = 1;
+        deletion_report_frame.getContentPane().add(deletion_report_frame_heading_label, deletion_report_frame_heading_label_gc);
+        deletion_report_frame.getContentPane().add(deletion_report_frame_computer_label, deletion_report_frame_computer_label_gc);
+        deletion_report_frame.getContentPane().add(deletion_report_frame_scroll_pane, deletion_report_frame_scroll_pane_gc);
         deletion_report_frame.setDefaultCloseOperation(HIDE_ON_CLOSE);
         deletion_report_frame.setMinimumSize(new Dimension(1200, 600));
         deletion_report_frame.pack();
@@ -878,41 +896,29 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     }
 
     /**
-     * Converts the deletion report from ProfileDeleter into a HTML String and
-     * displays it in the deletion report JFrame.
+     * Displays the deletion report from ProfileDeleter process deletion function on a new JFrame using a JTable to display the data.
      *
      * @param deletion_report the deletion report returned from ProfileDeleter
      * after a deletion is processed
      */
     private void displayDeletionReport(List<String> deletion_report) {
-        String html_deletion_report = "<html>" + '\n';
-        html_deletion_report += "<head>" + '\n';
-        html_deletion_report += "</head>" + '\n';
-        html_deletion_report += "<body>" + '\n';
-        html_deletion_report += "<h1>Deletion Report</h1>" + '\n';
-        html_deletion_report += "<p><b>Computer:</b>" + '\t' + profile_deleter.getRemoteComputer() + "</p>" + '\n';
-        html_deletion_report += "<table>" + '\n';
-        int count = 0;
-        for (String line : deletion_report) {
-            String[] split_line = line.split("\t");
-            html_deletion_report += "<tr>";
-            for (String line_part : split_line) {
-                if(count > 0) {
-                    html_deletion_report += "<td>";
-                    if (count == 1) {
-                        html_deletion_report += "<b>" + line_part + "</b>";
+        if(deletion_report.size() > 2) {
+            deletion_report_frame_computer_label.setText("Computer: " + profile_deleter.getRemoteComputer());
+            String[] deletion_report_headings = new String[deletion_report.get(1).split("\t").length];
+            Object[][] deletion_report_content = new Object[deletion_report.size()-2][];
+            for (int i = 0; i < deletion_report.size(); i++) {
+                if(i > 0) {
+                    if(i == 1) {
+                        deletion_report_headings = deletion_report.get(i).split("\t");
                     } else {
-                        html_deletion_report += line_part;
+                        deletion_report_content[i-2] = deletion_report.get(i).split("\t");
                     }
-                    html_deletion_report += "</td>";
                 }
             }
-            html_deletion_report += "</tr>" + '\n';
-            count++;
+            deletion_report_frame_table.setModel(new DefaultTableModel(deletion_report_content, deletion_report_headings));
+            deletion_report_frame_table.setAutoCreateRowSorter(true);
+            deletion_report_frame.setVisible(true);
         }
-        html_deletion_report += "</table>" + '\n';
-        deletion_report_frame_editor_pane.setText(html_deletion_report);
-        deletion_report_frame.setVisible(true);
     }
 
     /**
