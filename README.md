@@ -8,7 +8,6 @@ Should work on Windows 7 and higher versions.
 
 To do:
 
-* Implement Help button
 * Try and make tooltips redraw if moving between two cells that show the same tooltip. Currently if two adjacent cells show the same tooltip the tip won't redraw. This is unintuitive and just looks like program lag.
 
 Bugs:
