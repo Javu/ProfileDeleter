@@ -10,6 +10,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
 import java.awt.event.MouseEvent;
+import java.io.File;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -17,12 +18,15 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JDialog;
+import javax.swing.JEditorPane;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.JWindow;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
@@ -36,6 +40,7 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableModel;
+import javax.swing.text.html.HTMLEditorKit;
 
 /**
  * Implementation of a Swing GUI for the ProfileDeleter class.
@@ -49,6 +54,8 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     boolean show_tooltips;
     int tooltip_delay_timer;
     int tooltip_dismiss_timer;
+    String help_location;
+    String help_text;
     Color uneditable_color;
 
     /**
@@ -85,6 +92,10 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     private GridBagConstraints delete_all_users_checkbox_gc;
     private JCheckBox tooltips_checkbox;
     private GridBagConstraints tooltips_checkbox_gc;
+    private JFrame help_frame;
+    private JEditorPane help_frame_editor_pane;
+    private JScrollPane help_frame_scroll_pane;
+    private HTMLEditorKit help_frame_html_editor_kit;
 
     /**
      * SwingWorker threads for GUI.
@@ -122,7 +133,10 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         show_tooltips = true;
         tooltip_delay_timer = 0;
         tooltip_dismiss_timer = 60000;
+        help_location = "";
         uneditable_color = new Color(235, 235, 235);
+        
+        // Loads the GUI Configuration settings from the profiledeleter.config file.
         List<String> config = new ArrayList<>();
         try {
             config = profile_deleter.readFromFile("profiledeleter.config");
@@ -133,11 +147,26 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                     tooltip_delay_timer = Integer.parseInt(line.replace("tooltip_delay_timer=", ""));
                 } else if (line.startsWith("tooltip_dismiss_timer=")) {
                     tooltip_dismiss_timer = Integer.parseInt(line.replace("tooltip_dismiss_timer=", ""));
+                } else if (line.startsWith("help=")) {
+                    help_location = line.replace("help=", "");
+                    try {
+                        List<String> help_text_array = profile_deleter.readFromFile(help_location + "\\profile_deleter_help.html");
+                        int count = 1;
+                        for(String help_text_line : help_text_array) {
+                            help_text += help_text_line;
+                            if(count < help_text_array.size()) {
+                                help_text += '\n';
+                            }
+                            count++;
+                        }
+                    } catch (IOException e) {
+                        help_text = "Failed to load help. Check help folder " + help_location + " for help documents";
+                    }
                 }
             }
-        } catch (IOException e) {
-        }
+        } catch (IOException e) {}
 
+        // Configuration of tooltip settings
         ToolTipManager.sharedInstance().setEnabled(show_tooltips);
         ToolTipManager.sharedInstance().setInitialDelay(tooltip_delay_timer);
         ToolTipManager.sharedInstance().setDismissDelay(tooltip_dismiss_timer);
@@ -146,6 +175,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         setMinimumSize(new Dimension(1150, 600));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         getContentPane().setLayout(new GridBagLayout());
+        setLocationRelativeTo(null);
 
         // Column header tooltips in the results table JTable GUI element.
         final String[] columnToolTips = {
@@ -377,7 +407,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         // Initialisation of help button GUI element.
         help_button = new JButton("Help");
-        help_button.setToolTipText("Displays help instructions");
+        help_button.setToolTipText("Displays/hides help instructions");
         help_button.setActionCommand("Help");
         help_button.addActionListener(this);
         help_button_gc = new GridBagConstraints();
@@ -413,6 +443,30 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         exit_button_gc.gridwidth = 1;
         exit_button_gc.gridheight = 1;
 
+        // Initialisation of help instructions display GUI element.
+        help_frame = new JFrame("Profile Deleter Help");
+        help_frame_editor_pane = new JEditorPane();
+        help_frame_editor_pane.setEditable(false);
+        help_frame_editor_pane.setContentType("text/html");
+        try {
+            File help_file = new File(help_location + "\\profile_deleter_help.html");
+            if(!help_file.exists()) {
+                throw new IOException("Help file does not exist");
+            }
+            help_frame_editor_pane.setPage((new File(help_location + "\\profile_deleter_help.html").toURI().toURL()));
+        } catch (IOException e) {
+            help_frame_html_editor_kit = new HTMLEditorKit();
+            help_frame_editor_pane.setEditorKit(help_frame_html_editor_kit);
+            help_frame_editor_pane.setDocument(help_frame_html_editor_kit.createDefaultDocument());
+            help_frame_editor_pane.setText(help_text);
+        }
+        help_frame_scroll_pane = new JScrollPane(help_frame_editor_pane);
+        help_frame.getContentPane().add(help_frame_scroll_pane);
+        help_frame.setDefaultCloseOperation(HIDE_ON_CLOSE);
+        help_frame.setMinimumSize(new Dimension(1200, 600));
+        help_frame.pack();
+        help_frame.setVisible(false);
+        
         // Add all GUI elements to top level JFrame and display the GUI.
         getContentPane().add(computer_name_text_field, computer_name_text_field_gc);
         getContentPane().add(set_computer_button, set_computer_button_gc);
@@ -659,7 +713,6 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         delete_all_users_checkbox.setEnabled(false);
         run_deletion_button.setEnabled(false);
         write_log_button.setEnabled(false);
-        help_button.setEnabled(false);
         results_table.setEnabled(false);
         (set_computer_thread = new setComputerThread()).execute();
     }
@@ -680,7 +733,6 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         delete_all_users_checkbox.setEnabled(false);
         run_deletion_button.setEnabled(false);
         write_log_button.setEnabled(false);
-        help_button.setEnabled(false);
         results_table.setEnabled(false);
         (rerun_checks_thread = new rerunChecksThread()).execute();
     }
@@ -701,7 +753,6 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         delete_all_users_checkbox.setEnabled(false);
         run_deletion_button.setEnabled(false);
         write_log_button.setEnabled(false);
-        help_button.setEnabled(false);
         results_table.setEnabled(false);
         (run_deletion_thread = new runDeletionThread()).execute();
     }
@@ -722,7 +773,6 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         delete_all_users_checkbox.setEnabled(false);
         run_deletion_button.setEnabled(false);
         write_log_button.setEnabled(false);
-        help_button.setEnabled(false);
         results_table.setEnabled(false);
         (write_log_thread = new writeLogThread()).execute();
     }
@@ -771,7 +821,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
      * Display help message.
      */
     private void helpButton() {
-
+        help_frame.setVisible(!help_frame.isVisible());
     }
 
     /**
@@ -853,7 +903,6 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             registry_check_checkbox.setEnabled(true);
             delete_all_users_checkbox.setEnabled(true);
             write_log_button.setEnabled(true);
-            help_button.setEnabled(true);
             results_table.setEnabled(true);
         }
     }
@@ -892,7 +941,6 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             registry_check_checkbox.setEnabled(true);
             delete_all_users_checkbox.setEnabled(true);
             write_log_button.setEnabled(true);
-            help_button.setEnabled(true);
             results_table.setEnabled(true);
         }
     }
@@ -925,7 +973,6 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             registry_check_checkbox.setEnabled(true);
             delete_all_users_checkbox.setEnabled(true);
             write_log_button.setEnabled(true);
-            help_button.setEnabled(true);
             results_table.setEnabled(true);
         }
     }
@@ -970,7 +1017,6 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             registry_check_checkbox.setEnabled(true);
             delete_all_users_checkbox.setEnabled(true);
             write_log_button.setEnabled(true);
-            help_button.setEnabled(true);
             results_table.setEnabled(true);
         }
     }

@@ -1803,24 +1803,7 @@ public class ProfileDeleter {
                             logMessage("Profiledeleter.config.default file is incomplete", LOG_TYPE.ERROR, true);
                             logMessage("Attempting to recreate profiledeleter.config.default", LOG_TYPE.INFO, true);
                             failed_to_load_config_default = true;
-                            List<String> profile_deleter_config_default = new ArrayList<>();
-                            profile_deleter_config_default.add("logs=.\\\\logs");
-                            profile_deleter_config_default.add("pstools=.\\\\pstools");
-                            profile_deleter_config_default.add("reports=.\\\\reports");
-                            profile_deleter_config_default.add("sessions=.\\\\sessions");
-                            profile_deleter_config_default.add("src=.\\\\src");
-                            profile_deleter_config_default.add("size_check_default=false");
-                            profile_deleter_config_default.add("state_check_default=true");
-                            profile_deleter_config_default.add("registry_check_default=true");
-                            profile_deleter_config_default.add("delete_all_users_default=false");
-                            profile_deleter_config_default.add("show_tooltips=false");
-                            profile_deleter_config_default.add("tooltip_delay_timer=0");
-                            profile_deleter_config_default.add("tooltip_dismiss_timer=60000");
-                            profile_deleter_config_default.add("state_check_attempts=10");
-                            profile_deleter_config_default.add("registry_check_attempts=30");
-                            profile_deleter_config_default.add("cannot_delete_list=public");
-                            profile_deleter_config_default.add("should_not_delete_list=administrator");
-                            profile_deleter_config_default.add("should_not_delete_list=intranet");
+                            List<String> profile_deleter_config_default = generateProfileDeleterConfigDefault();
                             writeToFile("profiledeleter.config.default", profile_deleter_config_default, false);
                             logMessage("Successfully recreated profiledeleter.config.default", LOG_TYPE.INFO, true);
                         } else {
@@ -1841,24 +1824,7 @@ public class ProfileDeleter {
                         logMessage("Failed to load profiledeleter.config.default", LOG_TYPE.ERROR, true);
                         logMessage("Attempting to recreate profiledeleter.config.default", LOG_TYPE.INFO, true);
                         failed_to_load_config_default = true;
-                        List<String> profile_deleter_config_default = new ArrayList<>();
-                        profile_deleter_config_default.add("logs=.\\\\logs");
-                        profile_deleter_config_default.add("pstools=.\\\\pstools");
-                        profile_deleter_config_default.add("reports=.\\\\reports");
-                        profile_deleter_config_default.add("sessions=.\\\\sessions");
-                        profile_deleter_config_default.add("src=.\\\\src");
-                        profile_deleter_config_default.add("size_check_default=false");
-                        profile_deleter_config_default.add("state_check_default=true");
-                        profile_deleter_config_default.add("registry_check_default=true");
-                        profile_deleter_config_default.add("delete_all_users_default=false");
-                        profile_deleter_config_default.add("show_tooltips=false");
-                        profile_deleter_config_default.add("tooltip_delay_timer=0");
-                        profile_deleter_config_default.add("tooltip_dismiss_timer=60000");
-                        profile_deleter_config_default.add("state_check_attempts=10");
-                        profile_deleter_config_default.add("registry_check_attempts=30");
-                        profile_deleter_config_default.add("cannot_delete_list=public");
-                        profile_deleter_config_default.add("should_not_delete_list=administrator");
-                        profile_deleter_config_default.add("should_not_delete_list=intranet");
+                        List<String> profile_deleter_config_default = generateProfileDeleterConfigDefault();
                         try {
                             writeToFile("profiledeleter.config.default", profile_deleter_config_default, false);
                             logMessage("Successfully recreated profiledeleter.config.default", LOG_TYPE.INFO, true);
@@ -1873,6 +1839,44 @@ public class ProfileDeleter {
                 }
             }
         }
+    }
+
+    /**
+     * Generates a List containing String values for the
+     * profiledeleter.config.default file.
+     *
+     * @return a List containing String values for the
+     * profiledeleter.config.default file
+     */
+    public List<String> generateProfileDeleterConfigDefault() {
+        List<String> profile_deleter_config_default = new ArrayList<>();
+        profile_deleter_config_default.add("* default configuration settings for ProfileDeleter program. DO NOT EDIT THIS FILE. If you want to change the configuration settings edit profiledeleter.config instead");
+        profile_deleter_config_default.add("* locations for folders used by the program");
+        profile_deleter_config_default.add("logs=logs");
+        profile_deleter_config_default.add("pstools=pstools");
+        profile_deleter_config_default.add("reports=reports");
+        profile_deleter_config_default.add("sessions=sessions");
+        profile_deleter_config_default.add("src=src");
+        profile_deleter_config_default.add("help=help");
+        profile_deleter_config_default.add("* whether specific toggles should default to true or false");
+        profile_deleter_config_default.add("size_check_default=false");
+        profile_deleter_config_default.add("state_check_default=true");
+        profile_deleter_config_default.add("registry_check_default=true");
+        profile_deleter_config_default.add("delete_all_users_default=false");
+        profile_deleter_config_default.add("show_tooltips=false");
+        profile_deleter_config_default.add("* how long (in milliseconds) to wait before displaying tooltips and dismissing tooltips once displayed");
+        profile_deleter_config_default.add("tooltip_delay_timer=0");
+        profile_deleter_config_default.add("tooltip_dismiss_timer=60000");
+        profile_deleter_config_default.add("* the number of times to repeat specfic checks before registering a fail");
+        profile_deleter_config_default.add("state_check_attempts=10");
+        profile_deleter_config_default.add("registry_check_attempts=30");
+        profile_deleter_config_default.add("* cannot delete list. Users in this list cannot be deleted by the program. Add users to the list by including a new line with cannot_delete_list=<username>");
+        profile_deleter_config_default.add("cannot_delete_list=public");
+        profile_deleter_config_default.add("cannot_delete_list=default");
+        profile_deleter_config_default.add("* should not delete list. Users in this list will not be flagged for deletion automatically by the program and must be flagged manually. Add users to the list by including a new line with should_not_delete_list=<username>");
+        profile_deleter_config_default.add("should_not_delete_list=administrator");
+        profile_deleter_config_default.add("should_not_delete_list=intranet");
+        return profile_deleter_config_default;
     }
 
     /**
