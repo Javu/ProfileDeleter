@@ -794,7 +794,7 @@ public class ProfileDeleter {
             boolean run = true;
             while (run) {
                 try {
-                    registryQuery(remote_computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList", local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg");
+                    registryQuery(remote_computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList", local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.txt");
                     run = false;
                 } catch (IOException | InterruptedException | CannotEditException e) {
                     if (count >= registry_check_attempts) {
@@ -809,7 +809,7 @@ public class ProfileDeleter {
             count = 1;
             while (run) {
                 try {
-                    registryQuery(remote_computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid", local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg");
+                    registryQuery(remote_computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid", local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.txt");
                     run = false;
                 } catch (IOException | InterruptedException | CannotEditException e) {
                     if (count >= registry_check_attempts) {
@@ -829,12 +829,12 @@ public class ProfileDeleter {
      * attribute.
      * <p>
      * backupAndCopyRegistry function must be run before this function can be
-     * run, or the needed .reg files need to be manually created.<br>
+     * run, or the needed files need to be manually created.<br>
      * Local data directory attribute must be initialised before this function
      * can be run.
      *
      * @throws IOException thrown if IO errors are received when trying to open
-     * needed .reg files
+     * needed files
      * @throws NotInitialisedException local data directory attribute has not
      * been initialised
      */
@@ -845,17 +845,17 @@ public class ProfileDeleter {
             List<String> regkeys_profile_guid;
             String filename_friendly_computer = remote_computer.replace('.', '_');
             try {
-                logMessage("Loading file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg", LOG_TYPE.INFO, true);
-                regkeys_profile_list = readFromFile(local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg");
-                logMessage("Loading file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileReg.reg", LOG_TYPE.INFO, true);
-                regkeys_profile_guid = readFromFile(local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg");
+                logMessage("Loading file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.txt", LOG_TYPE.INFO, true);
+                regkeys_profile_list = readFromFile(local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.txt");
+                logMessage("Loading file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.txt", LOG_TYPE.INFO, true);
+                regkeys_profile_guid = readFromFile(local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.txt");
                 if (regkeys_profile_list != null && !regkeys_profile_list.isEmpty() && regkeys_profile_guid != null && !regkeys_profile_guid.isEmpty()) {
                     String current_sid = "";
                     String profile_path = "";
                     String profile_guid = "";
                     boolean found_profile_path = false;
                     int count = 0;
-                    logMessage("Processing file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg", LOG_TYPE.INFO, true);
+                    logMessage("Processing file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.txt", LOG_TYPE.INFO, true);
                     for (String line : regkeys_profile_list) {
                         line = line.replace(" ", "");
                         line = line.replace("\t", "");
@@ -876,7 +876,7 @@ public class ProfileDeleter {
                                                 if (guid.contains("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid\\")) {
                                                     guid = guid.replace("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid\\", "");
                                                     if (guid.compareTo(profile_guid) == 0) {
-                                                        logMessage("Found matching GUID from " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg. Checking SID for match", LOG_TYPE.INFO, true);
+                                                        logMessage("Found matching GUID from " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.txt. Checking SID for match", LOG_TYPE.INFO, true);
                                                         found_guid = true;
                                                     }
                                                 } else if (found_guid) {
@@ -922,12 +922,12 @@ public class ProfileDeleter {
                     registry_check_complete = true;
                     logMessage("Successfully compiled SID and GUID data from registry backups", LOG_TYPE.INFO, true);
                 } else {
-                    String message = "File " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg or " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.reg is either empty or corrupt";
+                    String message = "File " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.txt or " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.txt is either empty or corrupt";
                     logMessage(message, LOG_TYPE.ERROR, true);
                     throw new NotInitialisedException(message);
                 }
             } catch (IOException e) {
-                logMessage("Unable to read file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.reg. File may not exist. Error is " + e.getMessage(), LOG_TYPE.ERROR, true);
+                logMessage("Unable to read file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.txt. File may not exist. Error is " + e.getMessage(), LOG_TYPE.ERROR, true);
                 throw e;
             }
         }
@@ -1525,7 +1525,7 @@ public class ProfileDeleter {
                 logMessage(message, LOG_TYPE.ERROR, true);
                 throw new CannotEditException(message);
             }
-            logMessage("Successfully saved up registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name, LOG_TYPE.INFO, true);
+            logMessage("Successfully saved registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name, LOG_TYPE.INFO, true);
         } catch (IOException | InterruptedException e) {
             logMessage("Could not save registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name + ". Error is " + e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
