@@ -694,7 +694,8 @@ public class ProfileDeleter {
         if (user_list != null && !user_list.isEmpty() && state_check_complete && registry_check_complete) {
             ArrayList<UserData> new_folders = new ArrayList<>();
             ArrayList<String> deleted_folders = new ArrayList<>();
-            deleted_folders.add("User" + '\t' + "Deleted Successfully?" + '\t' + "Folder Deleted?" + '\t' + "SID Deleted?" + '\t' + "GUID Deleted?" + '\t' + "SID" + '\t' + "GUID");
+            double total_size_deleted = 0.0;
+            deleted_folders.add("User" + '\t' + "Deleted Successfully?" + '\t' + "Folder Deleted?" + '\t' + "SID Deleted?" + '\t' + "GUID Deleted?" + '\t' + "SID" + '\t' + "GUID" + '\t' + "Size");
             for (UserData user : user_list) {
                 if (user.getDelete()) {
                     logMessage("User " + user.getName() + " is flagged for deletion", LOG_TYPE.INFO, true);
@@ -750,7 +751,10 @@ public class ProfileDeleter {
                     } else {
                         deleted_user_success = "No";
                     }
-                    deleted_folders.add(user.getName() + '\t' + deleted_user_success + '\t' + deleted_user_folder_success + '\t' + deleted_user_sid_success + '\t' + deleted_user_guid_success + '\t' + user.getSid() + '\t' + user.getGuid());
+                    deleted_folders.add(user.getName() + '\t' + deleted_user_success + '\t' + deleted_user_folder_success + '\t' + deleted_user_sid_success + '\t' + deleted_user_guid_success + '\t' + user.getSid() + '\t' + user.getGuid() + '\t' + user.getSize());
+                    if(user.getSize() != null && !user.getSize().isEmpty()) {
+                        total_size_deleted += Double.parseDouble(user.getSize());
+                    }
                 } else {
                     new_folders.add(user);
                 }
@@ -759,7 +763,14 @@ public class ProfileDeleter {
             logMessage("Completed deletions", LOG_TYPE.INFO, true);
             if (deleted_folders.size() > 1) {
                 try {
-                    writeToFile(reports_location + "\\" + remote_computer + "_deletion_report_" + session_id + ".txt", deleted_folders);
+                    List<String> formatted_report = new ArrayList<String>();
+                    formatted_report.add("Deletion Report");
+                    formatted_report.add("Computer: " + remote_computer);
+                    formatted_report.add("Total Size Deleted: " + Long.toString(Math.round(total_size_deleted)));
+                    for(String deleted_folder : deleted_folders) {
+                        formatted_report.add(deleted_folder);
+                    }
+                    writeToFile(reports_location + "\\" + remote_computer + "_deletion_report_" + session_id + ".txt", formatted_report);
                     logMessage("Deletion report written to file " + reports_location + "\\" + remote_computer + "_deletion_report_" + session_id + ".txt", LOG_TYPE.INFO, true);
                 } catch (IOException e) {
                     logMessage("Failed to write deletion report to file " + reports_location + "\\" + remote_computer + "_deletion_report_" + session_id + ".txt. Error is: " + e.getMessage(), LOG_TYPE.ERROR, true);

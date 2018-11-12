@@ -5,6 +5,9 @@ import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
@@ -55,6 +58,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     String help_location;
     String help_text;
     Color uneditable_color;
+    String deletion_report_string;
 
     /**
      * Swing GUI elements.
@@ -99,6 +103,8 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     private GridBagConstraints deletion_report_frame_heading_label_gc;
     private JLabel deletion_report_frame_computer_label;
     private GridBagConstraints deletion_report_frame_computer_label_gc;
+    private JButton deletion_report_frame_copy_to_clipboard_button;
+    private GridBagConstraints deletion_report_frame_copy_to_clipboard_button_gc;
     private JTable deletion_report_frame_table;
     private JScrollPane deletion_report_frame_scroll_pane;
     private GridBagConstraints deletion_report_frame_scroll_pane_gc;
@@ -141,6 +147,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         tooltip_dismiss_timer = 60000;
         help_location = "";
         uneditable_color = new Color(235, 235, 235);
+        deletion_report_string = "";
 
         // Loads the GUI Configuration settings from the profiledeleter.config file.
         List<String> config = new ArrayList<>();
@@ -477,26 +484,41 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         // Initialisation of deletion report display GUI element.
         deletion_report_frame = new JFrame("Deletion Report");
         deletion_report_frame.getContentPane().setLayout(new GridBagLayout());
-        deletion_report_frame_heading_label = new JLabel("Deletion Report");
+        deletion_report_frame_heading_label = new JLabel("<html><h2>Deletion Report</h2></html>");
+        deletion_report_frame_heading_label.setOpaque(true);
+        deletion_report_frame_heading_label.setBackground(Color.WHITE);
         deletion_report_frame_heading_label_gc = new GridBagConstraints();
         deletion_report_frame_heading_label_gc.fill = GridBagConstraints.BOTH;
+        deletion_report_frame_heading_label_gc.gridwidth = GridBagConstraints.REMAINDER;
         deletion_report_frame_heading_label_gc.gridx = 0;
         deletion_report_frame_heading_label_gc.gridy = 0;
         deletion_report_frame_computer_label = new JLabel();
+        deletion_report_frame_computer_label.setOpaque(true);
+        deletion_report_frame_computer_label.setBackground(Color.WHITE);
         deletion_report_frame_computer_label_gc = new GridBagConstraints();
         deletion_report_frame_computer_label_gc.fill = GridBagConstraints.BOTH;
         deletion_report_frame_computer_label_gc.gridx = 0;
         deletion_report_frame_computer_label_gc.gridy = 1;
+        deletion_report_frame_computer_label_gc.weightx = 1;
+        deletion_report_frame_copy_to_clipboard_button = new JButton("Copy Deletion Report to Clipboard");
+        deletion_report_frame_copy_to_clipboard_button.setActionCommand("CopyDeletionReport");
+        deletion_report_frame_copy_to_clipboard_button.addActionListener(this);
+        deletion_report_frame_copy_to_clipboard_button_gc = new GridBagConstraints();
+        deletion_report_frame_copy_to_clipboard_button_gc.fill = GridBagConstraints.BOTH;
+        deletion_report_frame_copy_to_clipboard_button_gc.gridx = 1;
+        deletion_report_frame_copy_to_clipboard_button_gc.gridy = 1;
         deletion_report_frame_table = new JTable();
         deletion_report_frame_scroll_pane = new JScrollPane(deletion_report_frame_table);
         deletion_report_frame_scroll_pane_gc = new GridBagConstraints();
         deletion_report_frame_scroll_pane_gc.fill = GridBagConstraints.BOTH;
+        deletion_report_frame_scroll_pane_gc.gridwidth = GridBagConstraints.REMAINDER;
         deletion_report_frame_scroll_pane_gc.gridx = 0;
         deletion_report_frame_scroll_pane_gc.gridy = 2;
         deletion_report_frame_scroll_pane_gc.weightx = 1;
         deletion_report_frame_scroll_pane_gc.weighty = 1;
         deletion_report_frame.getContentPane().add(deletion_report_frame_heading_label, deletion_report_frame_heading_label_gc);
         deletion_report_frame.getContentPane().add(deletion_report_frame_computer_label, deletion_report_frame_computer_label_gc);
+        deletion_report_frame.getContentPane().add(deletion_report_frame_copy_to_clipboard_button, deletion_report_frame_copy_to_clipboard_button_gc);
         deletion_report_frame.getContentPane().add(deletion_report_frame_scroll_pane, deletion_report_frame_scroll_pane_gc);
         deletion_report_frame.setDefaultCloseOperation(HIDE_ON_CLOSE);
         deletion_report_frame.setMinimumSize(new Dimension(1200, 600));
@@ -749,6 +771,9 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             case "Exit":
                 exitButton();
                 break;
+            case "CopyDeletionReport":
+                copyDeletionReportToClipboardButton();
+                break;
         }
     }
 
@@ -877,6 +902,19 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
      */
     private void helpButton() {
         help_frame.setVisible(!help_frame.isVisible());
+        /*
+        profile_deleter.setRemoteComputer("CITSZTESTPC0001");
+        List<String> deletion_report = new ArrayList<>();
+        deletion_report.add("Deletion Report");
+        deletion_report.add("User\tDeleted Successfully?\tFolder Deleted?\tSID Deleted?\tGUID Deleted?\tSID\tGUID\tSize");
+        deletion_report.add("test1\tYes\tYes\tYes\tYes\tS-1-1-1234\t{abcdefg}\t1089765");
+        deletion_report.add("test2\tNo\tUser logged in\tYes\tYes\tS-1-1-7654\t{lmnopqr}\t53827354");
+        deletion_report.add("test3\tYes\tYes\tYes\tYes\tS-1-1-4321\t{mcgsjry}\t2736253465");
+        deletion_report.add("test4\tYes\tYes\tSID is blank\tGUID is blank\t\t\t12280089012");
+        deletion_report.add("test5\tYes\tYes\tYes\tYes\tS-1-1-3254\t{cjsufht}\t5273167");
+        deletion_report.add("test6\tNo\tYes\tFailed to delete\tFailed to delete\tS-1-1-3509\t{plkjhtr}\t102789345");
+        displayDeletionReport(deletion_report);
+        */
     }
 
     /**
@@ -886,6 +924,20 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
      */
     private void exitButton() {
         System.exit(0);
+    }
+    
+    /**
+     * Run when the copy deletion report to clipboard button is pressed on the deletion report JFrame.
+     * <p>
+     * Copies the deletion report to the clipboard
+     */
+    private void copyDeletionReportToClipboardButton() {
+        if (deletion_report_string != null && !deletion_report_string.isEmpty()) {
+            StringSelection selection = new StringSelection(deletion_report_string);
+            Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+            clipboard.setContents(selection, selection);
+            profile_deleter.logMessage("Copied deletion report to clipboard", ProfileDeleter.LOG_TYPE.INFO, true);
+        }
     }
 
     /**
@@ -903,19 +955,112 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
      */
     private void displayDeletionReport(List<String> deletion_report) {
         if(deletion_report.size() > 2) {
-            deletion_report_frame_computer_label.setText("Computer: " + profile_deleter.getRemoteComputer());
+            String deletion_report_header_as_string = "";
+            String deletion_report_headings_as_string = "";
+            String deletion_report_content_as_string = "";
+            Double total_size = 0.0;
+            deletion_report_frame.setTitle("Deletion Report - " + profile_deleter.getRemoteComputer());
             String[] deletion_report_headings = new String[deletion_report.get(1).split("\t").length];
             Object[][] deletion_report_content = new Object[deletion_report.size()-2][];
             for (int i = 0; i < deletion_report.size(); i++) {
                 if(i > 0) {
                     if(i == 1) {
                         deletion_report_headings = deletion_report.get(i).split("\t");
+                        deletion_report_headings_as_string += deletion_report.get(i);
                     } else {
                         deletion_report_content[i-2] = deletion_report.get(i).split("\t");
+                        String size_formatted = "";
+                        if(deletion_report_content[i-2][7].toString() != null && !deletion_report_content[i-2][7].toString().isEmpty()) {
+                            total_size += Double.parseDouble(deletion_report_content[i-2][7].toString());
+                            size_formatted = doubleToFormattedString(Double.parseDouble(deletion_report_content[i-2][7].toString()) / (1024 * 1024)) + " MB";
+                        }
+                        deletion_report_content_as_string += deletion_report_content[i-2][0].toString() + '\t' + deletion_report_content[i-2][1].toString() + '\t' + deletion_report_content[i-2][2].toString() + '\t' + deletion_report_content[i-2][3].toString() + '\t' + deletion_report_content[i-2][4].toString() + '\t' + deletion_report_content[i-2][5].toString() + '\t' + deletion_report_content[i-2][6].toString() + '\t' + size_formatted;
+                        if(i != deletion_report.size()-1) {
+                            deletion_report_content_as_string += '\n';
+                        }
                     }
+                } else {
+                    deletion_report_header_as_string += deletion_report.get(i) + '\n';
                 }
             }
+            String total_size_formatted = "";
+            if(total_size > 0.0) {
+                total_size_formatted = doubleToFormattedString(total_size / (1024 * 1024)) + " MB";
+            }
+            deletion_report_frame_computer_label.setText("<html><strong>Computer:</strong> " + profile_deleter.getRemoteComputer() + "<br>" + "<strong>Total Size Deleted:</strong> " + total_size_formatted + "</html>");
+            deletion_report_header_as_string += "Computer:" + '\t' + profile_deleter.getRemoteComputer() + '\n';
+            deletion_report_header_as_string += "Total Size Deleted:" + '\t' + total_size_formatted + '\n';
+            deletion_report_string = deletion_report_header_as_string + deletion_report_headings_as_string + '\n' + deletion_report_content_as_string;
+            
+            // Default renderer for table columns.
+            TableCellRenderer default_renderer = new DefaultTableCellRenderer() {
+
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value, boolean is_selected, boolean has_focus, int row, int column) {
+                    Component tableCellRendererComponent = super.getTableCellRendererComponent(table, value, is_selected, has_focus, row, column);
+                    if (!(table.getModel().getValueAt(table.convertRowIndexToModel(row), 1)).toString().equals("Yes")) {
+                        tableCellRendererComponent.setForeground(Color.WHITE);
+                        tableCellRendererComponent.setBackground(Color.DARK_GRAY);
+                    } else {
+                        
+                        tableCellRendererComponent.setForeground(Color.BLACK);
+                        tableCellRendererComponent.setBackground(Color.WHITE);
+                    }
+                    return tableCellRendererComponent;
+                }
+            };
+            // Determines how the Successfully Deleted? column shoud be displayed.
+            TableCellRenderer deletion_successful_renderer = new DefaultTableCellRenderer() {
+
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value, boolean is_selected, boolean has_focus, int row, int column) {
+                    Component tableCellRendererComponent = super.getTableCellRendererComponent(table, value, is_selected, has_focus, row, column);
+                    if (!(table.getModel().getValueAt(table.convertRowIndexToModel(row), 1)).toString().equals("Yes")) {
+                        tableCellRendererComponent.setForeground(Color.WHITE);
+                        tableCellRendererComponent.setBackground(Color.DARK_GRAY);
+                    } else {
+                        tableCellRendererComponent.setForeground(Color.BLACK);
+                        tableCellRendererComponent.setBackground(uneditable_color);
+                    }
+                    return tableCellRendererComponent;
+                }
+            };
+            // Determines how the Size column shoud be displayed.
+            TableCellRenderer size_renderer = new DefaultTableCellRenderer() {
+
+                @Override
+                public void setValue(Object value) {
+                    String output = "";
+                    if (value != null && !value.toString().isEmpty()) {
+                        output = doubleToFormattedString(Double.parseDouble(value.toString()) / (1024.0 * 1024.0)) + " MB";
+                    }
+                    setText(output);
+                }
+                
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value, boolean is_selected, boolean has_focus, int row, int column) {
+                    Component tableCellRendererComponent = super.getTableCellRendererComponent(table, value, is_selected, has_focus, row, column);
+                    if (!(table.getModel().getValueAt(table.convertRowIndexToModel(row), 1)).toString().equals("Yes")) {
+                        tableCellRendererComponent.setForeground(Color.WHITE);
+                        tableCellRendererComponent.setBackground(Color.DARK_GRAY);
+                    } else {
+                        tableCellRendererComponent.setForeground(Color.BLACK);
+                        tableCellRendererComponent.setBackground(Color.WHITE);
+                    }
+                    ((DefaultTableCellRenderer) tableCellRendererComponent).setHorizontalAlignment(DefaultTableCellRenderer.RIGHT);
+                    return tableCellRendererComponent;
+                }
+            };
+            
             deletion_report_frame_table.setModel(new DefaultTableModel(deletion_report_content, deletion_report_headings));
+            deletion_report_frame_table.getColumnModel().getColumn(0).setCellRenderer(default_renderer);
+            deletion_report_frame_table.getColumnModel().getColumn(1).setCellRenderer(deletion_successful_renderer);
+            deletion_report_frame_table.getColumnModel().getColumn(2).setCellRenderer(default_renderer);
+            deletion_report_frame_table.getColumnModel().getColumn(3).setCellRenderer(default_renderer);
+            deletion_report_frame_table.getColumnModel().getColumn(4).setCellRenderer(default_renderer);
+            deletion_report_frame_table.getColumnModel().getColumn(5).setCellRenderer(default_renderer);
+            deletion_report_frame_table.getColumnModel().getColumn(6).setCellRenderer(default_renderer);
+            deletion_report_frame_table.getColumnModel().getColumn(7).setCellRenderer(size_renderer);
             deletion_report_frame_table.setAutoCreateRowSorter(true);
             deletion_report_frame.setVisible(true);
         }
