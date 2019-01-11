@@ -970,9 +970,13 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                     } else {
                         deletion_report_content[i-2] = deletion_report.get(i).split("\t");
                         String size_formatted = "";
-                        if(deletion_report_content[i-2][7].toString() != null && !deletion_report_content[i-2][7].toString().isEmpty()) {
-                            total_size += Double.parseDouble(deletion_report_content[i-2][7].toString());
-                            size_formatted = doubleToFormattedString(Double.parseDouble(deletion_report_content[i-2][7].toString()) / (1024 * 1024)) + " MB";
+                        if(deletion_report_content[i-2][7] != null && !deletion_report_content[i-2][7].toString().isEmpty()) {
+                            if(deletion_report_content[i-2][7].toString().compareTo("Not calculated") != 0) {
+                                total_size += Double.parseDouble(deletion_report_content[i-2][7].toString());
+                                size_formatted = doubleToFormattedString(Double.parseDouble(deletion_report_content[i-2][7].toString()) / (1024 * 1024)) + " MB";
+                            } else {
+                                size_formatted = deletion_report_content[i-2][7].toString();
+                            }
                         }
                         deletion_report_content_as_string += deletion_report_content[i-2][0].toString() + '\t' + deletion_report_content[i-2][1].toString() + '\t' + deletion_report_content[i-2][2].toString() + '\t' + deletion_report_content[i-2][3].toString() + '\t' + deletion_report_content[i-2][4].toString() + '\t' + deletion_report_content[i-2][5].toString() + '\t' + deletion_report_content[i-2][6].toString() + '\t' + size_formatted;
                         if(i != deletion_report.size()-1) {
@@ -986,6 +990,8 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             String total_size_formatted = "";
             if(total_size > 0.0) {
                 total_size_formatted = doubleToFormattedString(total_size / (1024 * 1024)) + " MB";
+            } else {
+                total_size_formatted = "Not calculated";
             }
             deletion_report_frame_computer_label.setText("<html><strong>Computer:</strong> " + profile_deleter.getRemoteComputer() + "<br>" + "<strong>Total Size Deleted:</strong> " + total_size_formatted + "</html>");
             deletion_report_header_as_string += "Computer:" + '\t' + profile_deleter.getRemoteComputer() + '\n';
@@ -1027,12 +1033,18 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             };
             // Determines how the Size column shoud be displayed.
             TableCellRenderer size_renderer = new DefaultTableCellRenderer() {
-
+                boolean right_align = true;
+                
                 @Override
                 public void setValue(Object value) {
                     String output = "";
                     if (value != null && !value.toString().isEmpty()) {
-                        output = doubleToFormattedString(Double.parseDouble(value.toString()) / (1024.0 * 1024.0)) + " MB";
+                        if(value.toString().compareTo("Not calculated") != 0) {
+                            output = doubleToFormattedString(Double.parseDouble(value.toString()) / (1024.0 * 1024.0)) + " MB";
+                        } else {
+                            output = value.toString();
+                            right_align = false;
+                        }
                     }
                     setText(output);
                 }
@@ -1047,7 +1059,11 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                         tableCellRendererComponent.setForeground(Color.BLACK);
                         tableCellRendererComponent.setBackground(Color.WHITE);
                     }
-                    ((DefaultTableCellRenderer) tableCellRendererComponent).setHorizontalAlignment(DefaultTableCellRenderer.RIGHT);
+                    if(right_align) {
+                        ((DefaultTableCellRenderer) tableCellRendererComponent).setHorizontalAlignment(DefaultTableCellRenderer.RIGHT);
+                    } else {
+                        ((DefaultTableCellRenderer) tableCellRendererComponent).setHorizontalAlignment(DefaultTableCellRenderer.LEFT);
+                    }
                     return tableCellRendererComponent;
                 }
             };

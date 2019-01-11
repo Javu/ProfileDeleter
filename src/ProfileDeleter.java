@@ -751,10 +751,13 @@ public class ProfileDeleter {
                     } else {
                         deleted_user_success = "No";
                     }
-                    deleted_folders.add(user.getName() + '\t' + deleted_user_success + '\t' + deleted_user_folder_success + '\t' + deleted_user_sid_success + '\t' + deleted_user_guid_success + '\t' + user.getSid() + '\t' + user.getGuid() + '\t' + user.getSize());
                     if(user.getSize() != null && !user.getSize().isEmpty()) {
                         total_size_deleted += Double.parseDouble(user.getSize());
+                    } else {
+                        user.setSize("Not calculated");
                     }
+                    deleted_folders.add(user.getName() + '\t' + deleted_user_success + '\t' + deleted_user_folder_success + '\t' + deleted_user_sid_success + '\t' + deleted_user_guid_success + '\t' + user.getSid() + '\t' + user.getGuid() + '\t' + user.getSize());
+                    
                 } else {
                     new_folders.add(user);
                 }
