@@ -1037,7 +1037,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             };
             // Determines how the Size column shoud be displayed.
             TableCellRenderer size_renderer = new DefaultTableCellRenderer() {
-                boolean right_align = true;
+                //boolean right_align = true;
                 
                 @Override
                 public void setValue(Object value) {
@@ -1047,7 +1047,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                             output = doubleToFormattedString(Double.parseDouble(value.toString()) / (1024.0 * 1024.0)) + " MB";
                         } catch(NumberFormatException e) {
                             output = value.toString();
-                            right_align = false;
+                            //right_align = false;
                         }
                     }
                     setText(output);
@@ -1063,11 +1063,11 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                         tableCellRendererComponent.setForeground(Color.BLACK);
                         tableCellRendererComponent.setBackground(Color.WHITE);
                     }
-                    if(right_align) {
+                    //if(right_align) {
                         ((DefaultTableCellRenderer) tableCellRendererComponent).setHorizontalAlignment(DefaultTableCellRenderer.RIGHT);
-                    } else {
-                        ((DefaultTableCellRenderer) tableCellRendererComponent).setHorizontalAlignment(DefaultTableCellRenderer.LEFT);
-                    }
+                    //} else {
+                    //    ((DefaultTableCellRenderer) tableCellRendererComponent).setHorizontalAlignment(DefaultTableCellRenderer.LEFT);
+                    //}
                     return tableCellRendererComponent;
                 }
             };
