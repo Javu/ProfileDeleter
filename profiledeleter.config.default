@@ -18,6 +18,8 @@ tooltip_dismiss_timer=60000
 * the number of times to repeat specfic checks before registering a fail
 state_check_attempts=10
 registry_check_attempts=30
+* number of concurrent threads to use for size check and deletion process
+number_of_pooled_threads=10
 * cannot delete list. Users in this list cannot be deleted by the program. Add users to the list by including a new line with cannot_delete_list=<username>
 cannot_delete_list=public
 cannot_delete_list=default

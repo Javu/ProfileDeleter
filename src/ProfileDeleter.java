@@ -14,6 +14,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 
 /**
@@ -69,6 +71,7 @@ public class ProfileDeleter {
     private String src_location;
     private int state_check_attempts;
     private int registry_check_attempts;
+    private int number_of_pooled_threads;
     private boolean size_check;
     private boolean state_check;
     private boolean registry_check;
@@ -137,6 +140,7 @@ public class ProfileDeleter {
         src_location = "";
         state_check_attempts = 0;
         registry_check_attempts = 0;
+        number_of_pooled_threads = 0;
         size_check = false;
         state_check = false;
         registry_check = false;
@@ -757,7 +761,6 @@ public class ProfileDeleter {
                         user.setSize("Not calculated");
                     }
                     deleted_folders.add(user.getName() + '\t' + deleted_user_success + '\t' + deleted_user_folder_success + '\t' + deleted_user_sid_success + '\t' + deleted_user_guid_success + '\t' + user.getSid() + '\t' + user.getGuid() + '\t' + user.getSize());
-                    
                 } else {
                     new_folders.add(user);
                 }
@@ -1014,8 +1017,10 @@ public class ProfileDeleter {
     public void checkSize() {
         logMessage("Calcuting size of directory list", LOG_TYPE.INFO, true);
         if (user_list.size() > 0 && users_directory.compareTo("") != 0) {
+            ExecutorService thread_pool = Executors.newFixedThreadPool(number_of_pooled_threads);
+            logMessage("Pooling size check tasks for each user", LOG_TYPE.INFO, true);
             for (int i = 0; i < user_list.size(); i++) {
-                String folder = user_list.get(i).getName();
+                /*String folder = user_list.get(i).getName();
                 String folder_size = "";
                 try {
                     folder_size = findFolderSize(folder);
@@ -1025,8 +1030,16 @@ public class ProfileDeleter {
                     logMessage(folder_size + " for folder " + folder, LOG_TYPE.WARNING, true);
                     logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
                 }
-                user_list.get(i).setSize(folder_size);
+                user_list.get(i).setSize(folder_size);*/
+                thread_pool.submit(new size_check_process(i, this));
             }
+            logMessage("All tasks have been scheduled, awaiting task completion", LOG_TYPE.INFO, true);
+            thread_pool.shutdown();
+            boolean thread_pool_terminated = false;
+            while(!thread_pool_terminated) {
+                    thread_pool_terminated = thread_pool.isTerminated();
+            }
+            logMessage("All tasks completed", LOG_TYPE.INFO, true);
             size_check_complete = true;
             logMessage("Finished calculating size of directory list", LOG_TYPE.INFO, true);
         } else {
@@ -1780,6 +1793,7 @@ public class ProfileDeleter {
             delete_all_users = false;
             state_check_attempts = 0;
             registry_check_attempts = 0;
+            number_of_pooled_threads = 0;
             cannot_delete_list = new ArrayList<>();
             should_not_delete_list = new ArrayList<>();
             try {
@@ -1813,7 +1827,9 @@ public class ProfileDeleter {
                         state_check_attempts = (Integer.parseInt(line.replace("state_check_attempts=", "")));
                     } else if (line.startsWith("registry_check_attempts=")) {
                         registry_check_attempts = (Integer.parseInt(line.replace("registry_check_attempts=", "")));
-                    } else if (line.startsWith("cannot_delete_list=")) {
+                    } else if (line.startsWith("number_of_pooled_threads=")) {
+                        number_of_pooled_threads = (Integer.parseInt(line.replace("number_of_pooled_threads=", "")));
+                    }  else if (line.startsWith("cannot_delete_list=")) {
                         cannot_delete_list.add(line.replace("cannot_delete_list=", ""));
                     } else if (line.startsWith("should_not_delete_list=")) {
                         should_not_delete_list.add(line.replace("should_not_delete_list=", ""));
@@ -1896,6 +1912,8 @@ public class ProfileDeleter {
         profile_deleter_config_default.add("* the number of times to repeat specfic checks before registering a fail");
         profile_deleter_config_default.add("state_check_attempts=10");
         profile_deleter_config_default.add("registry_check_attempts=30");
+        profile_deleter_config_default.add("* number of concurrent threads to use for size check and deletion process");
+        profile_deleter_config_default.add("number_of_pooled_threads=10");
         profile_deleter_config_default.add("* cannot delete list. Users in this list cannot be deleted by the program. Add users to the list by including a new line with cannot_delete_list=<username>");
         profile_deleter_config_default.add("cannot_delete_list=public");
         profile_deleter_config_default.add("cannot_delete_list=default");
@@ -2010,5 +2028,30 @@ public class ProfileDeleter {
         }
         logMessage("Ping check has completed, result is " + pc_online, LOG_TYPE.INFO, true);
         return pc_online;
+    }
+}
+
+class size_check_process implements Runnable {
+    private int index;
+    private ProfileDeleter profile_deleter;
+    
+    size_check_process(int index, ProfileDeleter profile_deleter) {
+        this.index = index;
+        this.profile_deleter = profile_deleter;
+    }
+    
+    @Override
+    public void run() {
+        String folder = profile_deleter.getUserList().get(index).getName();
+        String folder_size = "";
+        try {
+            folder_size = profile_deleter.findFolderSize(folder);
+            profile_deleter.logMessage("Calculated size " + folder_size + " for folder " + folder, ProfileDeleter.LOG_TYPE.INFO, true);
+        } catch (NonNumericException | IOException e) {
+            folder_size = "Could not calculate size";
+            profile_deleter.logMessage(folder_size + " for folder " + folder, ProfileDeleter.LOG_TYPE.WARNING, true);
+            profile_deleter.logMessage(e.getMessage(), ProfileDeleter.LOG_TYPE.ERROR, true);
+        }
+        profile_deleter.getUserList().get(index).setSize(folder_size);
     }
 }

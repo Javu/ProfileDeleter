@@ -669,7 +669,11 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             public void setValue(Object value) {
                 String output = "";
                 if (value != null && !value.toString().isEmpty()) {
-                    output = doubleToFormattedString(Double.parseDouble(value.toString()) / (1024.0 * 1024.0)) + " MB";
+                    try {
+                        output = doubleToFormattedString(Double.parseDouble(value.toString()) / (1024.0 * 1024.0)) + " MB";
+                    } catch(NumberFormatException e) {
+                        output = value.toString();
+                    }
                 }
                 setText(output);
             }
@@ -1039,12 +1043,18 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 public void setValue(Object value) {
                     String output = "";
                     if (value != null && !value.toString().isEmpty()) {
-                        if(value.toString().compareTo("Not calculated") != 0) {
+                        //if(value.toString().compareTo("Not calculated") != 0) {
+                        try {
                             output = doubleToFormattedString(Double.parseDouble(value.toString()) / (1024.0 * 1024.0)) + " MB";
-                        } else {
+                        } catch(NumberFormatException e) {
                             output = value.toString();
                             right_align = false;
                         }
+                            /*output = doubleToFormattedString(Double.parseDouble(value.toString()) / (1024.0 * 1024.0)) + " MB";
+                        } else {
+                            output = value.toString();
+                            right_align = false;
+                        }*/
                     }
                     setText(output);
                 }
@@ -1121,7 +1131,9 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 if (profile_deleter.getSizeCheckComplete()) {
                     double total_size = 0.0;
                     for (UserData user : profile_deleter.getUserList()) {
-                        total_size += Double.parseDouble(user.getSize());
+                        if(!user.getSize().equals("Could not calculate size")) {
+                            total_size += Double.parseDouble(user.getSize());
+                        }
                     }
                     setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer() + " - Total Users Size: " + doubleToFormattedString(total_size / (1024.0 * 1024.0)) + " MB");
                 } else {
