@@ -975,10 +975,10 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                         deletion_report_content[i-2] = deletion_report.get(i).split("\t");
                         String size_formatted = "";
                         if(deletion_report_content[i-2][7] != null && !deletion_report_content[i-2][7].toString().isEmpty()) {
-                            if(deletion_report_content[i-2][7].toString().compareTo("Not calculated") != 0) {
+                            try{
                                 total_size += Double.parseDouble(deletion_report_content[i-2][7].toString());
                                 size_formatted = doubleToFormattedString(Double.parseDouble(deletion_report_content[i-2][7].toString()) / (1024 * 1024)) + " MB";
-                            } else {
+                            } catch(NumberFormatException e) {
                                 size_formatted = deletion_report_content[i-2][7].toString();
                             }
                         }
@@ -1043,18 +1043,12 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 public void setValue(Object value) {
                     String output = "";
                     if (value != null && !value.toString().isEmpty()) {
-                        //if(value.toString().compareTo("Not calculated") != 0) {
                         try {
                             output = doubleToFormattedString(Double.parseDouble(value.toString()) / (1024.0 * 1024.0)) + " MB";
                         } catch(NumberFormatException e) {
                             output = value.toString();
                             right_align = false;
                         }
-                            /*output = doubleToFormattedString(Double.parseDouble(value.toString()) / (1024.0 * 1024.0)) + " MB";
-                        } else {
-                            output = value.toString();
-                            right_align = false;
-                        }*/
                     }
                     setText(output);
                 }

@@ -696,73 +696,34 @@ public class ProfileDeleter {
     public List<String> processDeletion() throws NotInitialisedException {
         logMessage("Attempting to run deletion on users list", LOG_TYPE.INFO, true);
         if (user_list != null && !user_list.isEmpty() && state_check_complete && registry_check_complete) {
-            ArrayList<UserData> new_folders = new ArrayList<>();
-            ArrayList<String> deleted_folders = new ArrayList<>();
+            List<UserData> new_folders = new ArrayList<>();
+            List<String> deleted_folders = new ArrayList<>();
             double total_size_deleted = 0.0;
             deleted_folders.add("User" + '\t' + "Deleted Successfully?" + '\t' + "Folder Deleted?" + '\t' + "SID Deleted?" + '\t' + "GUID Deleted?" + '\t' + "SID" + '\t' + "GUID" + '\t' + "Size");
+            ExecutorService thread_pool = Executors.newFixedThreadPool(number_of_pooled_threads);
+            logMessage("Pooling user deletions for each flagged user", LOG_TYPE.INFO, true);
             for (UserData user : user_list) {
                 if (user.getDelete()) {
                     logMessage("User " + user.getName() + " is flagged for deletion", LOG_TYPE.INFO, true);
-                    boolean folder_delete = false;
-                    boolean sid_delete = false;
-                    boolean guid_delete = false;
-                    String deleted_user_success = "";
-                    String deleted_user_folder_success = "";
-                    String deleted_user_sid_success = "";
-                    String deleted_user_guid_success = "";
-                    try {
-                        directoryDelete(users_directory + user.getName());
-                        deleted_user_folder_success = "Yes";
-                        folder_delete = true;
-                        logMessage("Successfully deleted user directory for " + user.getName(), LOG_TYPE.INFO, true);
-                    } catch (IOException | CannotEditException | InterruptedException e) {
-                        String message = "Failed to delete user directory " + user.getName() + ". Error is " + e.getMessage();
-                        deleted_user_folder_success = message;
-                        logMessage(message, LOG_TYPE.ERROR, true);
-                    }
-                    try {
-                        if (user.getSid().compareTo("") != 0) {
-                            registryDelete(remote_computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\" + user.getSid());
-                            deleted_user_sid_success = "Yes";
-                            logMessage("Successfully deleted SID " + user.getSid() + " for user " + user.getName(), LOG_TYPE.INFO, true);
-                        } else {
-                            deleted_user_sid_success = "SID is blank";
-                            logMessage("SID for user " + user.getName() + " is blank", LOG_TYPE.WARNING, true);
-                        }
-                        sid_delete = true;
-                    } catch (IOException | InterruptedException e) {
-                        String message = "Failed to delete user SID " + user.getSid() + " from registry. Error is " + e.getMessage();
-                        deleted_user_sid_success = message;
-                        logMessage(message, LOG_TYPE.ERROR, true);
-                    }
-                    try {
-                        if (user.getGuid().compareTo("") != 0) {
-                            registryDelete(remote_computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid\\" + user.getGuid());
-                            deleted_user_guid_success = "Yes";
-                            logMessage("Successfully deleted GUID " + user.getGuid() + " for user " + user.getName(), LOG_TYPE.INFO, true);
-                        } else {
-                            deleted_user_guid_success = "GUID is blank";
-                            logMessage("GUID for user " + user.getName() + " is blank", LOG_TYPE.WARNING, true);
-                        }
-                        guid_delete = true;
-                    } catch (IOException | InterruptedException e) {
-                        String message = "Failed to delete user GUID " + user.getGuid() + " from registry. Error is " + e.getMessage();
-                        deleted_user_guid_success = message;
-                        logMessage(message, LOG_TYPE.ERROR, true);
-                    }
-                    if(folder_delete && sid_delete && guid_delete) {
-                        deleted_user_success = "Yes";
-                    } else {
-                        deleted_user_success = "No";
-                    }
-                    if(user.getSize() != null && !user.getSize().isEmpty()) {
-                        total_size_deleted += Double.parseDouble(user.getSize());
-                    } else {
-                        user.setSize("Not calculated");
-                    }
-                    deleted_folders.add(user.getName() + '\t' + deleted_user_success + '\t' + deleted_user_folder_success + '\t' + deleted_user_sid_success + '\t' + deleted_user_guid_success + '\t' + user.getSid() + '\t' + user.getGuid() + '\t' + user.getSize());
+                    deleted_folders.add(user.getName());
+                    thread_pool.submit(new delete_user_process(user, this, deleted_folders));
                 } else {
                     new_folders.add(user);
+                }
+            }
+            logMessage("All tasks have been scheduled, awaiting task completion", LOG_TYPE.INFO, true);
+            thread_pool.shutdown();
+            boolean thread_pool_terminated = false;
+            while(!thread_pool_terminated) {
+                    thread_pool_terminated = thread_pool.isTerminated();
+            }
+            logMessage("All tasks completed", LOG_TYPE.INFO, true);
+            if(deleted_folders.size() > 1) {
+                for(int i=1;i<deleted_folders.size();i++) {
+                    String[] deleted_user = deleted_folders.get(i).split("\t");
+                    try{
+                        total_size_deleted = Double.parseDouble(deleted_user[7]);
+                    } catch(NumberFormatException e) {}
                 }
             }
             user_list = new_folders;
@@ -1020,17 +981,6 @@ public class ProfileDeleter {
             ExecutorService thread_pool = Executors.newFixedThreadPool(number_of_pooled_threads);
             logMessage("Pooling size check tasks for each user", LOG_TYPE.INFO, true);
             for (int i = 0; i < user_list.size(); i++) {
-                /*String folder = user_list.get(i).getName();
-                String folder_size = "";
-                try {
-                    folder_size = findFolderSize(folder);
-                    logMessage("Calculated size " + folder_size + " for folder " + folder, LOG_TYPE.INFO, true);
-                } catch (NonNumericException | IOException e) {
-                    folder_size = "Could not calculate size";
-                    logMessage(folder_size + " for folder " + folder, LOG_TYPE.WARNING, true);
-                    logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
-                }
-                user_list.get(i).setSize(folder_size);*/
                 thread_pool.submit(new size_check_process(i, this));
             }
             logMessage("All tasks have been scheduled, awaiting task completion", LOG_TYPE.INFO, true);
@@ -2053,5 +2003,75 @@ class size_check_process implements Runnable {
             profile_deleter.logMessage(e.getMessage(), ProfileDeleter.LOG_TYPE.ERROR, true);
         }
         profile_deleter.getUserList().get(index).setSize(folder_size);
+    }
+}
+
+class delete_user_process implements Runnable {
+    private UserData user;
+    private ProfileDeleter profile_deleter;
+    private List<String> deleted_folders;
+    
+    delete_user_process(UserData user, ProfileDeleter profile_deleter, List<String> deleted_folders) {
+        this.user = user;
+        this.profile_deleter = profile_deleter;
+        this.deleted_folders = deleted_folders;
+    }
+    
+    @Override
+    public void run() {
+        profile_deleter.logMessage("User " + user.getName() + " is flagged for deletion", ProfileDeleter.LOG_TYPE.INFO, true);
+        boolean folder_delete = false;
+        boolean sid_delete = false;
+        boolean guid_delete = false;
+        String deleted_user_success = "";
+        String deleted_user_folder_success = "";
+        String deleted_user_sid_success = "";
+        String deleted_user_guid_success = "";
+        try {
+            profile_deleter.directoryDelete(profile_deleter.getUsersDirectory() + user.getName());
+            deleted_user_folder_success = "Yes";
+            folder_delete = true;
+            profile_deleter.logMessage("Successfully deleted user directory for " + user.getName(), ProfileDeleter.LOG_TYPE.INFO, true);
+        } catch (IOException | CannotEditException | InterruptedException e) {
+            String message = "Failed to delete user directory " + user.getName() + ". Error is " + e.getMessage();
+            deleted_user_folder_success = message;
+            profile_deleter.logMessage(message, ProfileDeleter.LOG_TYPE.ERROR, true);
+        }
+        try {
+            if (user.getSid().compareTo("") != 0) {
+                profile_deleter.registryDelete(profile_deleter.getRemoteComputer(), "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\" + user.getSid());
+                deleted_user_sid_success = "Yes";
+                profile_deleter.logMessage("Successfully deleted SID " + user.getSid() + " for user " + user.getName(), ProfileDeleter.LOG_TYPE.INFO, true);
+            } else {
+                deleted_user_sid_success = "SID is blank";
+                profile_deleter.logMessage("SID for user " + user.getName() + " is blank", ProfileDeleter.LOG_TYPE.WARNING, true);
+            }
+            sid_delete = true;
+        } catch (IOException | InterruptedException e) {
+            String message = "Failed to delete user SID " + user.getSid() + " from registry. Error is " + e.getMessage();
+            deleted_user_sid_success = message;
+            profile_deleter.logMessage(message, ProfileDeleter.LOG_TYPE.ERROR, true);
+        }
+        try {
+            if (user.getGuid().compareTo("") != 0) {
+                profile_deleter.registryDelete(profile_deleter.getRemoteComputer(), "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid\\" + user.getGuid());
+                deleted_user_guid_success = "Yes";
+                profile_deleter.logMessage("Successfully deleted GUID " + user.getGuid() + " for user " + user.getName(), ProfileDeleter.LOG_TYPE.INFO, true);
+            } else {
+                deleted_user_guid_success = "GUID is blank";
+                profile_deleter.logMessage("GUID for user " + user.getName() + " is blank", ProfileDeleter.LOG_TYPE.WARNING, true);
+            }
+            guid_delete = true;
+        } catch (IOException | InterruptedException e) {
+            String message = "Failed to delete user GUID " + user.getGuid() + " from registry. Error is " + e.getMessage();
+            deleted_user_guid_success = message;
+            profile_deleter.logMessage(message, ProfileDeleter.LOG_TYPE.ERROR, true);
+        }
+        if(folder_delete && sid_delete && guid_delete) {
+            deleted_user_success = "Yes";
+        } else {
+            deleted_user_success = "No";
+        }
+        deleted_folders.set(deleted_folders.indexOf(user.getName()),user.getName() + '\t' + deleted_user_success + '\t' + deleted_user_folder_success + '\t' + deleted_user_sid_success + '\t' + deleted_user_guid_success + '\t' + user.getSid() + '\t' + user.getGuid() + '\t' + user.getSize());
     }
 }
