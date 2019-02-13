@@ -1203,7 +1203,7 @@ public class ProfileDeleter {
                 }
             }
             pstools_process.waitFor();
-            if (error.compareTo("editable") != 0) {
+            if (error.equals("editable")) {
                 String message = "Unable to rename folder " + directory + folder + ". Error is: " + error;
                 throw new CannotEditException(message);
             }
@@ -1530,16 +1530,28 @@ public class ProfileDeleter {
      * registry key
      * @throws InterruptedException the pstools process thread was interrupted
      */
-    public void registryDelete(String computer, String reg_key) throws IOException, InterruptedException {
+    public void registryDelete(String computer, String reg_key) throws IOException, CannotEditException, InterruptedException {
         try {
             logMessage("Attempting to delete registry key " + reg_key + " from computer " + computer, LOG_TYPE.INFO, true);
+            String line = "";
+            String error = "";
             String command = pstools_location + "\\psexec /accepteula \\\\" + computer + " REG DELETE \"" + reg_key + "\" /f";
             ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
             builder.redirectErrorStream(true);
             Process pstools_process = builder.start();
+            try (BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(pstools_process.getInputStream()))) {
+                while ((line = cmd_process_output_stream.readLine()) != null) {
+                    error = line;
+                }
+            }
+            if (!error.contains("error code 0")) {
+                String message = "Could not delete registry key " + reg_key + " on computer " + computer;
+                logMessage(message, LOG_TYPE.ERROR, true);
+                throw new CannotEditException(message);
+            }
             pstools_process.waitFor();
             logMessage("Successfully deleted registry key " + reg_key + " from computer " + computer, LOG_TYPE.INFO, true);
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException | CannotEditException | InterruptedException e) {
             logMessage("Could not delete registry key " + reg_key + " from computer " + computer, LOG_TYPE.ERROR, true);
             logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
@@ -2023,6 +2035,7 @@ class delete_user_process implements Runnable {
         boolean folder_delete = false;
         boolean sid_delete = false;
         boolean guid_delete = false;
+        int error_count = 0;
         String deleted_user_success = "";
         String deleted_user_folder_success = "";
         String deleted_user_sid_success = "";
@@ -2037,40 +2050,55 @@ class delete_user_process implements Runnable {
             deleted_user_folder_success = message;
             profile_deleter.logMessage(message, ProfileDeleter.LOG_TYPE.ERROR, true);
         }
-        try {
-            if (user.getSid().compareTo("") != 0) {
-                profile_deleter.registryDelete(profile_deleter.getRemoteComputer(), "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\" + user.getSid());
-                deleted_user_sid_success = "Yes";
-                profile_deleter.logMessage("Successfully deleted SID " + user.getSid() + " for user " + user.getName(), ProfileDeleter.LOG_TYPE.INFO, true);
-            } else {
-                deleted_user_sid_success = "SID is blank";
-                profile_deleter.logMessage("SID for user " + user.getName() + " is blank", ProfileDeleter.LOG_TYPE.WARNING, true);
+        while(!sid_delete && error_count < 5) {
+            try {
+                if (user.getSid().compareTo("") != 0) {
+                    profile_deleter.registryDelete(profile_deleter.getRemoteComputer(), "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\" + user.getSid());
+                    deleted_user_sid_success = "Yes";
+                    profile_deleter.logMessage("Successfully deleted SID " + user.getSid() + " for user " + user.getName(), ProfileDeleter.LOG_TYPE.INFO, true);
+                } else {
+                    deleted_user_sid_success = "SID is blank";
+                    profile_deleter.logMessage("SID for user " + user.getName() + " is blank", ProfileDeleter.LOG_TYPE.WARNING, true);
+                }
+                sid_delete = true;
+            } catch (IOException | CannotEditException | InterruptedException e) {
+                if(error_count >= 4) {
+                    String message = "Failed to delete user SID " + user.getSid() + " from registry. Error is " + e.getMessage();
+                    deleted_user_sid_success = message;
+                    profile_deleter.logMessage(message, ProfileDeleter.LOG_TYPE.ERROR, true);
+                } else {
+                    profile_deleter.logMessage("Failed to delete user SID " + user.getSid() + " on attempt " + error_count+1 + ". Will try again", ProfileDeleter.LOG_TYPE.ERROR, true);
+                }
+                error_count++;
             }
-            sid_delete = true;
-        } catch (IOException | InterruptedException e) {
-            String message = "Failed to delete user SID " + user.getSid() + " from registry. Error is " + e.getMessage();
-            deleted_user_sid_success = message;
-            profile_deleter.logMessage(message, ProfileDeleter.LOG_TYPE.ERROR, true);
         }
-        try {
-            if (user.getGuid().compareTo("") != 0) {
-                profile_deleter.registryDelete(profile_deleter.getRemoteComputer(), "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid\\" + user.getGuid());
-                deleted_user_guid_success = "Yes";
-                profile_deleter.logMessage("Successfully deleted GUID " + user.getGuid() + " for user " + user.getName(), ProfileDeleter.LOG_TYPE.INFO, true);
-            } else {
-                deleted_user_guid_success = "GUID is blank";
-                profile_deleter.logMessage("GUID for user " + user.getName() + " is blank", ProfileDeleter.LOG_TYPE.WARNING, true);
+        error_count = 0;
+        while(!guid_delete && error_count < 5) {
+            try {
+                if (user.getGuid().compareTo("") != 0) {
+                    profile_deleter.registryDelete(profile_deleter.getRemoteComputer(), "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid\\" + user.getGuid());
+                    deleted_user_guid_success = "Yes";
+                    profile_deleter.logMessage("Successfully deleted GUID " + user.getGuid() + " for user " + user.getName(), ProfileDeleter.LOG_TYPE.INFO, true);
+                } else {
+                    deleted_user_guid_success = "GUID is blank";
+                    profile_deleter.logMessage("GUID for user " + user.getName() + " is blank", ProfileDeleter.LOG_TYPE.WARNING, true);
+                }
+                guid_delete = true;
+            } catch (IOException | CannotEditException | InterruptedException e) {
+                if(error_count >= 4) {
+                    String message = "Failed to delete user GUID " + user.getGuid() + " from registry. Error is " + e.getMessage();
+                    deleted_user_guid_success = message;
+                    profile_deleter.logMessage(message, ProfileDeleter.LOG_TYPE.ERROR, true);
+                } else {
+                    profile_deleter.logMessage("Failed to delete user GUID " + user.getGuid() + " on attempt " + error_count+1 + ". Will try again", ProfileDeleter.LOG_TYPE.ERROR, true);
+                }
+                error_count++;
             }
-            guid_delete = true;
-        } catch (IOException | InterruptedException e) {
-            String message = "Failed to delete user GUID " + user.getGuid() + " from registry. Error is " + e.getMessage();
-            deleted_user_guid_success = message;
-            profile_deleter.logMessage(message, ProfileDeleter.LOG_TYPE.ERROR, true);
-        }
-        if(folder_delete && sid_delete && guid_delete) {
-            deleted_user_success = "Yes";
-        } else {
-            deleted_user_success = "No";
+            if(folder_delete && sid_delete && guid_delete) {
+                deleted_user_success = "Yes";
+            } else {
+                deleted_user_success = "No";
+            }
         }
         deleted_folders.set(deleted_folders.indexOf(user.getName()),user.getName() + '\t' + deleted_user_success + '\t' + deleted_user_folder_success + '\t' + deleted_user_sid_success + '\t' + deleted_user_guid_success + '\t' + user.getSid() + '\t' + user.getGuid() + '\t' + user.getSize());
     }
