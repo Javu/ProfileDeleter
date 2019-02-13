@@ -2040,16 +2040,24 @@ class delete_user_process implements Runnable {
         String deleted_user_folder_success = "";
         String deleted_user_sid_success = "";
         String deleted_user_guid_success = "";
-        try {
-            profile_deleter.directoryDelete(profile_deleter.getUsersDirectory() + user.getName());
-            deleted_user_folder_success = "Yes";
-            folder_delete = true;
-            profile_deleter.logMessage("Successfully deleted user directory for " + user.getName(), ProfileDeleter.LOG_TYPE.INFO, true);
-        } catch (IOException | CannotEditException | InterruptedException e) {
-            String message = "Failed to delete user directory " + user.getName() + ". Error is " + e.getMessage();
-            deleted_user_folder_success = message;
-            profile_deleter.logMessage(message, ProfileDeleter.LOG_TYPE.ERROR, true);
+        while(!folder_delete && error_count < 5) {
+            try {
+                profile_deleter.directoryDelete(profile_deleter.getUsersDirectory() + user.getName());
+                deleted_user_folder_success = "Yes";
+                folder_delete = true;
+                profile_deleter.logMessage("Successfully deleted user directory for " + user.getName(), ProfileDeleter.LOG_TYPE.INFO, true);
+            } catch (IOException | CannotEditException | InterruptedException e) {
+                if(error_count >= 4) {
+                    String message = "Failed to delete user directory " + user.getName() + ". Error is " + e.getMessage();
+                    deleted_user_folder_success = message;
+                    profile_deleter.logMessage(message, ProfileDeleter.LOG_TYPE.ERROR, true);
+                } else {
+                    profile_deleter.logMessage("Failed to delete user directory " + user.getName() + " on attempt " + (error_count+1) + ". Will try again", ProfileDeleter.LOG_TYPE.WARNING, true);
+                }
+                error_count++;
+            }
         }
+        error_count = 0;
         while(!sid_delete && error_count < 5) {
             try {
                 if (user.getSid().compareTo("") != 0) {
@@ -2067,7 +2075,7 @@ class delete_user_process implements Runnable {
                     deleted_user_sid_success = message;
                     profile_deleter.logMessage(message, ProfileDeleter.LOG_TYPE.ERROR, true);
                 } else {
-                    profile_deleter.logMessage("Failed to delete user SID " + user.getSid() + " on attempt " + error_count+1 + ". Will try again", ProfileDeleter.LOG_TYPE.ERROR, true);
+                    profile_deleter.logMessage("Failed to delete user SID " + user.getSid() + " on attempt " + (error_count+1) + ". Will try again", ProfileDeleter.LOG_TYPE.WARNING, true);
                 }
                 error_count++;
             }
@@ -2090,7 +2098,7 @@ class delete_user_process implements Runnable {
                     deleted_user_guid_success = message;
                     profile_deleter.logMessage(message, ProfileDeleter.LOG_TYPE.ERROR, true);
                 } else {
-                    profile_deleter.logMessage("Failed to delete user GUID " + user.getGuid() + " on attempt " + error_count+1 + ". Will try again", ProfileDeleter.LOG_TYPE.ERROR, true);
+                    profile_deleter.logMessage("Failed to delete user GUID " + user.getGuid() + " on attempt " + (error_count+1) + ". Will try again", ProfileDeleter.LOG_TYPE.WARNING, true);
                 }
                 error_count++;
             }
