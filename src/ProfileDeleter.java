@@ -1203,7 +1203,7 @@ public class ProfileDeleter {
                 }
             }
             pstools_process.waitFor();
-            if (error.equals("editable")) {
+            if (!error.equals("editable")) {
                 String message = "Unable to rename folder " + directory + folder + ". Error is: " + error;
                 throw new CannotEditException(message);
             }
