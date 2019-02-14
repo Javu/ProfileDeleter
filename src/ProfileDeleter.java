@@ -71,6 +71,9 @@ public class ProfileDeleter {
     private String src_location;
     private int state_check_attempts;
     private int registry_check_attempts;
+    private int folder_deletion_attempts;
+    private int registry_sid_deletion_attempts;
+    private int registry_guid_deletion_attempts;
     private int number_of_pooled_threads;
     private boolean size_check;
     private boolean state_check;
@@ -140,6 +143,9 @@ public class ProfileDeleter {
         src_location = "";
         state_check_attempts = 0;
         registry_check_attempts = 0;
+        folder_deletion_attempts = 0;
+        registry_sid_deletion_attempts = 0;
+        registry_guid_deletion_attempts = 0;
         number_of_pooled_threads = 0;
         size_check = false;
         state_check = false;
@@ -276,6 +282,61 @@ public class ProfileDeleter {
     public void setRegistryCheckAttempts(int registry_check_attempts) {
         this.registry_check_attempts = registry_check_attempts;
         logMessage("Registry check attempts set to " + registry_check_attempts, LOG_TYPE.INFO, true);
+    }
+
+    /**
+     * Sets the folder deletion attempts attribute.
+     * <p>
+     * The number of times to attempt to delete a user folder before determining
+     * a failure.
+     *
+     * @param folder_deletion_attempts the number of times to attempt to delete
+     * a user folder before determining a failure
+     */
+    public void setFolderDeletionAttempts(int folder_deletion_attempts) {
+        this.folder_deletion_attempts = folder_deletion_attempts;
+        logMessage("Folder deletion attempts set to " + folder_deletion_attempts, LOG_TYPE.INFO, true);
+    }
+
+    /**
+     * Sets the registry sid deletion attempts attribute.
+     * <p>
+     * The number to attempt to delete a user registry sid before determining a
+     * failure.
+     *
+     * @param registry_sid_deletion_attempts the number of times to attempt to
+     * delete a user registry sid before determining a failure
+     */
+    public void setRegistrySidDeletionAttempts(int registry_sid_deletion_attempts) {
+        this.registry_sid_deletion_attempts = registry_sid_deletion_attempts;
+        logMessage("Registry SID deletion attempts set to " + registry_sid_deletion_attempts, LOG_TYPE.INFO, true);
+    }
+
+    /**
+     * Sets the registry guid deletion attempts attribute.
+     * <p>
+     * The number to attempt to delete a user registry guid before determining a
+     * failure.
+     *
+     * @param registry_guid_deletion_attempts the number of times to attempt to
+     * delete a user registry guid before determining a failure
+     */
+    public void setRegistryGuidDeletionAttempts(int registry_guid_deletion_attempts) {
+        this.registry_guid_deletion_attempts = registry_guid_deletion_attempts;
+        logMessage("Registry GUID deletion attempts set to " + registry_guid_deletion_attempts, LOG_TYPE.INFO, true);
+    }
+
+    /**
+     * Sets the number of pooled threads attribute.
+     * <p>
+     * The number of pooled threads to use for various lengthy processes.
+     *
+     * @param number_of_pooled_threads the number of pooled threads to use for
+     * various lengthy processes
+     */
+    public void setNumberOfPooledThreads(int number_of_pooled_threads) {
+        this.number_of_pooled_threads = number_of_pooled_threads;
+        logMessage("Number of pooled threads set to " + number_of_pooled_threads, LOG_TYPE.INFO, true);
     }
 
     /**
@@ -535,6 +596,56 @@ public class ProfileDeleter {
     }
 
     /**
+     * Gets the folder deletion attempts attribute.
+     * <p>
+     * The number of times to attempt to delete a user folder before determining
+     * a failure.
+     *
+     * @return the number of times to attempt to delete a user folder before
+     * determining a failure
+     */
+    public int getFolderDeletionAttempts() {
+        return folder_deletion_attempts;
+    }
+
+    /**
+     * Gets the registry sid deletion attempts attribute.
+     * <p>
+     * The number to attempt to delete a user registry sid before determining a
+     * failure.
+     *
+     * @return the number of times to attempt to delete a user registry sid
+     * before determining a failure
+     */
+    public int getRegistrySidDeletionAttempts() {
+        return registry_sid_deletion_attempts;
+    }
+
+    /**
+     * Gets the registry guid deletion attempts attribute.
+     * <p>
+     * The number to attempt to delete a user registry guid before determining a
+     * failure.
+     *
+     * @return the number of times to attempt to delete a user registry guid
+     * before determining a failure
+     */
+    public int getRegistryGuidDeletionAttempts() {
+        return registry_guid_deletion_attempts;
+    }
+
+    /**
+     * Gets the number of pooled threads attribute.
+     * <p>
+     * The number of pooled threads to use for various lengthy processes.
+     *
+     * @return the number of pooled threads to use for various lengthy processes
+     */
+    public int getNumberOfPooledThreads() {
+        return number_of_pooled_threads;
+    }
+
+    /**
      * Gets the size check attribute.
      *
      * @return whether to run a size check or not
@@ -714,16 +825,17 @@ public class ProfileDeleter {
             logMessage("All tasks have been scheduled, awaiting task completion", LOG_TYPE.INFO, true);
             thread_pool.shutdown();
             boolean thread_pool_terminated = false;
-            while(!thread_pool_terminated) {
-                    thread_pool_terminated = thread_pool.isTerminated();
+            while (!thread_pool_terminated) {
+                thread_pool_terminated = thread_pool.isTerminated();
             }
             logMessage("All tasks completed", LOG_TYPE.INFO, true);
-            if(deleted_folders.size() > 1) {
-                for(int i=1;i<deleted_folders.size();i++) {
+            if (deleted_folders.size() > 1) {
+                for (int i = 1; i < deleted_folders.size(); i++) {
                     String[] deleted_user = deleted_folders.get(i).split("\t");
-                    try{
+                    try {
                         total_size_deleted = Double.parseDouble(deleted_user[7]);
-                    } catch(NumberFormatException e) {}
+                    } catch (NumberFormatException e) {
+                    }
                 }
             }
             user_list = new_folders;
@@ -734,7 +846,7 @@ public class ProfileDeleter {
                     formatted_report.add("Deletion Report");
                     formatted_report.add("Computer: " + remote_computer);
                     formatted_report.add("Total Size Deleted: " + Long.toString(Math.round(total_size_deleted)));
-                    for(String deleted_folder : deleted_folders) {
+                    for (String deleted_folder : deleted_folders) {
                         formatted_report.add(deleted_folder);
                     }
                     writeToFile(reports_location + "\\" + remote_computer + "_deletion_report_" + session_id + ".txt", formatted_report);
@@ -986,8 +1098,8 @@ public class ProfileDeleter {
             logMessage("All tasks have been scheduled, awaiting task completion", LOG_TYPE.INFO, true);
             thread_pool.shutdown();
             boolean thread_pool_terminated = false;
-            while(!thread_pool_terminated) {
-                    thread_pool_terminated = thread_pool.isTerminated();
+            while (!thread_pool_terminated) {
+                thread_pool_terminated = thread_pool.isTerminated();
             }
             logMessage("All tasks completed", LOG_TYPE.INFO, true);
             size_check_complete = true;
@@ -1706,7 +1818,7 @@ public class ProfileDeleter {
     public String writeLog() throws IOException, NotInitialisedException {
         if (!log_list.isEmpty()) {
             try {
-                String filename = logs_location + "\\Profile_Deleter_Log_" + generateDateString() + ".txt";
+                String filename = logs_location + "\\Profile_Deleter_Log_" + remote_computer + "_" + generateDateString() + ".txt";
                 writeToFile(filename, log_list);
                 return filename;
             } catch (IOException e) {
@@ -1789,9 +1901,15 @@ public class ProfileDeleter {
                         state_check_attempts = (Integer.parseInt(line.replace("state_check_attempts=", "")));
                     } else if (line.startsWith("registry_check_attempts=")) {
                         registry_check_attempts = (Integer.parseInt(line.replace("registry_check_attempts=", "")));
+                    } else if (line.startsWith("folder_deletion_attempts=")) {
+                        folder_deletion_attempts = (Integer.parseInt(line.replace("folder_deletion_attempts=", "")));
+                    } else if (line.startsWith("registry_sid_deletion_attempts=")) {
+                        registry_sid_deletion_attempts = (Integer.parseInt(line.replace("registry_sid_deletion_attempts=", "")));
+                    } else if (line.startsWith("registry_guid_deletion_attempts=")) {
+                        registry_guid_deletion_attempts = (Integer.parseInt(line.replace("registry_guid_deletion_attempts=", "")));
                     } else if (line.startsWith("number_of_pooled_threads=")) {
                         number_of_pooled_threads = (Integer.parseInt(line.replace("number_of_pooled_threads=", "")));
-                    }  else if (line.startsWith("cannot_delete_list=")) {
+                    } else if (line.startsWith("cannot_delete_list=")) {
                         cannot_delete_list.add(line.replace("cannot_delete_list=", ""));
                     } else if (line.startsWith("should_not_delete_list=")) {
                         should_not_delete_list.add(line.replace("should_not_delete_list=", ""));
@@ -1871,9 +1989,12 @@ public class ProfileDeleter {
         profile_deleter_config_default.add("* how long (in milliseconds) to wait before displaying tooltips and dismissing tooltips once displayed");
         profile_deleter_config_default.add("tooltip_delay_timer=0");
         profile_deleter_config_default.add("tooltip_dismiss_timer=60000");
-        profile_deleter_config_default.add("* the number of times to repeat specfic checks before registering a fail");
+        profile_deleter_config_default.add("* the number of times to repeat specfic checks and processes before registering a fail");
         profile_deleter_config_default.add("state_check_attempts=10");
         profile_deleter_config_default.add("registry_check_attempts=30");
+        profile_deleter_config_default.add("folder_deletion_attempts=10");
+        profile_deleter_config_default.add("registry_sid_deletion_attempts=10");
+        profile_deleter_config_default.add("registry_guid_deletion_attempts=10");
         profile_deleter_config_default.add("* number of concurrent threads to use for size check and deletion process");
         profile_deleter_config_default.add("number_of_pooled_threads=10");
         profile_deleter_config_default.add("* cannot delete list. Users in this list cannot be deleted by the program. Add users to the list by including a new line with cannot_delete_list=<username>");
@@ -1994,14 +2115,15 @@ public class ProfileDeleter {
 }
 
 class size_check_process implements Runnable {
+
     private int index;
     private ProfileDeleter profile_deleter;
-    
+
     size_check_process(int index, ProfileDeleter profile_deleter) {
         this.index = index;
         this.profile_deleter = profile_deleter;
     }
-    
+
     @Override
     public void run() {
         String folder = profile_deleter.getUserList().get(index).getName();
@@ -2019,16 +2141,17 @@ class size_check_process implements Runnable {
 }
 
 class delete_user_process implements Runnable {
+
     private UserData user;
     private ProfileDeleter profile_deleter;
     private List<String> deleted_folders;
-    
+
     delete_user_process(UserData user, ProfileDeleter profile_deleter, List<String> deleted_folders) {
         this.user = user;
         this.profile_deleter = profile_deleter;
         this.deleted_folders = deleted_folders;
     }
-    
+
     @Override
     public void run() {
         profile_deleter.logMessage("User " + user.getName() + " is flagged for deletion", ProfileDeleter.LOG_TYPE.INFO, true);
@@ -2040,25 +2163,25 @@ class delete_user_process implements Runnable {
         String deleted_user_folder_success = "";
         String deleted_user_sid_success = "";
         String deleted_user_guid_success = "";
-        while(!folder_delete && error_count < 5) {
+        while (!folder_delete && error_count < profile_deleter.getFolderDeletionAttempts()) {
             try {
                 profile_deleter.directoryDelete(profile_deleter.getUsersDirectory() + user.getName());
                 deleted_user_folder_success = "Yes";
                 folder_delete = true;
                 profile_deleter.logMessage("Successfully deleted user directory for " + user.getName(), ProfileDeleter.LOG_TYPE.INFO, true);
             } catch (IOException | CannotEditException | InterruptedException e) {
-                if(error_count >= 4) {
+                if (error_count >= profile_deleter.getFolderDeletionAttempts()-1) {
                     String message = "Failed to delete user directory " + user.getName() + ". Error is " + e.getMessage();
                     deleted_user_folder_success = message;
                     profile_deleter.logMessage(message, ProfileDeleter.LOG_TYPE.ERROR, true);
                 } else {
-                    profile_deleter.logMessage("Failed to delete user directory " + user.getName() + " on attempt " + (error_count+1) + ". Will try again", ProfileDeleter.LOG_TYPE.WARNING, true);
+                    profile_deleter.logMessage("Failed to delete user directory " + user.getName() + " on attempt " + (error_count + 1) + ". Will try again", ProfileDeleter.LOG_TYPE.WARNING, true);
                 }
                 error_count++;
             }
         }
         error_count = 0;
-        while(!sid_delete && error_count < 5) {
+        while (!sid_delete && error_count < profile_deleter.getRegistrySidDeletionAttempts()) {
             try {
                 if (user.getSid().compareTo("") != 0) {
                     profile_deleter.registryDelete(profile_deleter.getRemoteComputer(), "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\" + user.getSid());
@@ -2070,18 +2193,18 @@ class delete_user_process implements Runnable {
                 }
                 sid_delete = true;
             } catch (IOException | CannotEditException | InterruptedException e) {
-                if(error_count >= 4) {
+                if (error_count >= profile_deleter.getRegistrySidDeletionAttempts()-1) {
                     String message = "Failed to delete user SID " + user.getSid() + " from registry. Error is " + e.getMessage();
                     deleted_user_sid_success = message;
                     profile_deleter.logMessage(message, ProfileDeleter.LOG_TYPE.ERROR, true);
                 } else {
-                    profile_deleter.logMessage("Failed to delete user SID " + user.getSid() + " on attempt " + (error_count+1) + ". Will try again", ProfileDeleter.LOG_TYPE.WARNING, true);
+                    profile_deleter.logMessage("Failed to delete user SID " + user.getSid() + " on attempt " + (error_count + 1) + ". Will try again", ProfileDeleter.LOG_TYPE.WARNING, true);
                 }
                 error_count++;
             }
         }
         error_count = 0;
-        while(!guid_delete && error_count < 5) {
+        while (!guid_delete && error_count < profile_deleter.getRegistryGuidDeletionAttempts()) {
             try {
                 if (user.getGuid().compareTo("") != 0) {
                     profile_deleter.registryDelete(profile_deleter.getRemoteComputer(), "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid\\" + user.getGuid());
@@ -2093,21 +2216,21 @@ class delete_user_process implements Runnable {
                 }
                 guid_delete = true;
             } catch (IOException | CannotEditException | InterruptedException e) {
-                if(error_count >= 4) {
+                if (error_count >= profile_deleter.getRegistryGuidDeletionAttempts()-1) {
                     String message = "Failed to delete user GUID " + user.getGuid() + " from registry. Error is " + e.getMessage();
                     deleted_user_guid_success = message;
                     profile_deleter.logMessage(message, ProfileDeleter.LOG_TYPE.ERROR, true);
                 } else {
-                    profile_deleter.logMessage("Failed to delete user GUID " + user.getGuid() + " on attempt " + (error_count+1) + ". Will try again", ProfileDeleter.LOG_TYPE.WARNING, true);
+                    profile_deleter.logMessage("Failed to delete user GUID " + user.getGuid() + " on attempt " + (error_count + 1) + ". Will try again", ProfileDeleter.LOG_TYPE.WARNING, true);
                 }
                 error_count++;
             }
-            if(folder_delete && sid_delete && guid_delete) {
+            if (folder_delete && sid_delete && guid_delete) {
                 deleted_user_success = "Yes";
             } else {
                 deleted_user_success = "No";
             }
         }
-        deleted_folders.set(deleted_folders.indexOf(user.getName()),user.getName() + '\t' + deleted_user_success + '\t' + deleted_user_folder_success + '\t' + deleted_user_sid_success + '\t' + deleted_user_guid_success + '\t' + user.getSid() + '\t' + user.getGuid() + '\t' + user.getSize());
+        deleted_folders.set(deleted_folders.indexOf(user.getName()), user.getName() + '\t' + deleted_user_success + '\t' + deleted_user_folder_success + '\t' + deleted_user_sid_success + '\t' + deleted_user_guid_success + '\t' + user.getSid() + '\t' + user.getGuid() + '\t' + user.getSize());
     }
 }
