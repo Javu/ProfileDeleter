@@ -1246,7 +1246,9 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 if (profile_deleter.getSizeCheckComplete()) {
                     double total_size = 0.0;
                     for (UserData user : profile_deleter.getUserList()) {
-                        total_size += Double.parseDouble(user.getSize());
+                        try {
+                            total_size += Double.parseDouble(user.getSize());
+                        } catch(NumberFormatException e) {}
                     }
                     setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer() + " - Total Users Size: " + doubleToFormattedString(total_size / (1024.0 * 1024.0)) + " MB");
                 }
