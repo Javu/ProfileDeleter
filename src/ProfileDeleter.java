@@ -1114,61 +1114,22 @@ public class ProfileDeleter {
      * if the folder can be edited and therefore deleted.
      * <p>
      * This check is required before a deletion can be run.
-     *
-     * @throws IOException an IO error occurs when trying to check the editable
-     * state of users in user list attribute
-     * @throws InterruptedException the cmd process thread was interrupted
      */
-    public void checkState() throws IOException, InterruptedException {
+    public void checkState() {
         logMessage("Checking editable state of directory list", LOG_TYPE.INFO, true);
         if (user_list.size() > 0 && users_directory.compareTo("") != 0) {
+            ExecutorService thread_pool = Executors.newFixedThreadPool(number_of_pooled_threads);
+            logMessage("Pooling state check tasks for each user", LOG_TYPE.INFO, true);
             for (int i = 0; i < user_list.size(); i++) {
-                String user = user_list.get(i).getName();
-                logMessage("Checking editable state of folder " + user, LOG_TYPE.INFO, true);
-                try {
-                    if (!cannot_delete_list.contains(user.toLowerCase())) {
-                        int count = 1;
-                        boolean run = true;
-                        while (run) {
-                            if (count > 1) {
-                                logMessage("Attempt " + count + " at checking state for user " + user, LOG_TYPE.INFO, true);
-                            }
-                            try {
-                                directoryRename(remote_computer, "C:\\users\\", user, user);
-                                user_list.get(i).setState("Editable");
-                                if (delete_all_users && !should_not_delete_list.contains(user.toLowerCase())) {
-                                    user_list.get(i).setDelete(true);
-                                }
-                                run = false;
-                                logMessage("User " + user + " determined to be editable", LOG_TYPE.INFO, true);
-                            } catch (CannotEditException e) {
-                                if (count >= state_check_attempts) {
-                                    user_list.get(i).setDelete(false);
-                                    logMessage("User " + user + " determined to be uneditable, all attempts have failed, state set to uneditable", LOG_TYPE.INFO, true);
-                                    run = false;
-                                    throw e;
-                                } else {
-                                    count++;
-                                    logMessage("User " + user + " determined to be uneditable, running state check again", LOG_TYPE.INFO, true);
-                                }
-                            }
-                        }
-                    } else {
-                        user_list.get(i).setState("Uneditable");
-                        user_list.get(i).setDelete(false);
-                        logMessage("User is in the cannot delete list, skipping check for this user", LOG_TYPE.INFO, true);
-                    }
-                } catch (CannotEditException e) {
-                    String message = "Uneditable";
-                    logMessage(message + ". User may be logged in or PC may need to be restarted", LOG_TYPE.WARNING, true);
-                    user_list.get(i).setState(message);
-                    user_list.get(i).setDelete(false);
-                } catch (IOException | InterruptedException e) {
-                    logMessage("Editable state check has failed", LOG_TYPE.ERROR, true);
-                    logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
-                    throw e;
-                }
+                thread_pool.submit(new state_check_process(i, this));
             }
+            logMessage("All tasks have been scheduled, awaiting task completion", LOG_TYPE.INFO, true);
+            thread_pool.shutdown();
+            boolean thread_pool_terminated = false;
+            while (!thread_pool_terminated) {
+                thread_pool_terminated = thread_pool.isTerminated();
+            }
+            logMessage("All tasks completed", LOG_TYPE.INFO, true);
             state_check_complete = true;
             logMessage("Finished checking editable state of directory list", LOG_TYPE.INFO, true);
         } else {
@@ -2137,6 +2098,66 @@ class size_check_process implements Runnable {
             profile_deleter.logMessage(e.getMessage(), ProfileDeleter.LOG_TYPE.ERROR, true);
         }
         profile_deleter.getUserList().get(index).setSize(folder_size);
+    }
+}
+
+class state_check_process implements Runnable{
+
+    private int index;
+    private ProfileDeleter profile_deleter;
+
+    state_check_process(int index, ProfileDeleter profile_deleter) {
+        this.index = index;
+        this.profile_deleter = profile_deleter;
+    }
+
+    @Override
+    public void run() {
+        String user = profile_deleter.getUserList().get(index).getName();
+        String folder_size = "";
+        profile_deleter.logMessage("Checking editable state of folder " + user, ProfileDeleter.LOG_TYPE.INFO, true);
+        try {
+            if (!profile_deleter.getCannotDeleteList().contains(user.toLowerCase())) {
+                int count = 1;
+                boolean run = true;
+                while (run) {
+                    if (count > 1) {
+                        profile_deleter.logMessage("Attempt " + count + " at checking state for user " + user, ProfileDeleter.LOG_TYPE.INFO, true);
+                    }
+                    try {
+                        profile_deleter.directoryRename(profile_deleter.getRemoteComputer(), "C:\\users\\", user, user);
+                        profile_deleter.getUserList().get(index).setState("Editable");
+                        if (profile_deleter.getDeleteAllUsers() && !profile_deleter.getShouldNotDeleteList().contains(user.toLowerCase())) {
+                            profile_deleter.getUserList().get(index).setDelete(true);
+                        }
+                        run = false;
+                        profile_deleter.logMessage("User " + user + " determined to be editable", ProfileDeleter.LOG_TYPE.INFO, true);
+                    } catch (CannotEditException e) {
+                        if (count >= profile_deleter.getStateCheckAttempts()) {
+                            profile_deleter.getUserList().get(index).setDelete(false);
+                            profile_deleter.logMessage("User " + user + " determined to be uneditable, all attempts have failed, state set to uneditable", ProfileDeleter.LOG_TYPE.INFO, true);
+                            run = false;
+                            throw e;
+                        } else {
+                            count++;
+                            profile_deleter.logMessage("User " + user + " determined to be uneditable, running state check again", ProfileDeleter.LOG_TYPE.INFO, true);
+                        }
+                    }
+                }
+            } else {
+                profile_deleter.getUserList().get(index).setState("Uneditable");
+                profile_deleter.getUserList().get(index).setDelete(false);
+                profile_deleter.logMessage("User is in the cannot delete list, skipping check for this user", ProfileDeleter.LOG_TYPE.INFO, true);
+            }
+        } catch (CannotEditException e) {
+            String message = "Uneditable";
+            profile_deleter.logMessage(message + ". User may be logged in or PC may need to be restarted", ProfileDeleter.LOG_TYPE.WARNING, true);
+            profile_deleter.getUserList().get(index).setState(message);
+            profile_deleter.getUserList().get(index).setDelete(false);
+        } catch (IOException | InterruptedException e) {
+            profile_deleter.logMessage("Editable state check has failed, you may not have permission to rename folders in the user directory or PC may be offline", ProfileDeleter.LOG_TYPE.ERROR, true);
+            profile_deleter.logMessage(e.getMessage(), ProfileDeleter.LOG_TYPE.ERROR, true);
+        }
     }
 }
 
