@@ -1916,7 +1916,7 @@ public class ProfileDeleter {
                     }
                 }
 
-                if (logs_location == null || logs_location.isEmpty() || pstools_location == null || pstools_location.isEmpty() || reports_location == null || reports_location.isEmpty() || sessions_location == null || sessions_location.isEmpty() || src_location == null || src_location.isEmpty()) {
+                if (logs_location == null || logs_location.isEmpty() || pstools_location == null || pstools_location.isEmpty() || reports_location == null || reports_location.isEmpty() || sessions_location == null || sessions_location.isEmpty() || src_location == null || src_location.isEmpty() || state_check_attempts <=0 || registry_check_attempts <=0 || folder_deletion_attempts <=0 || registry_sid_deletion_attempts <=0 || registry_guid_deletion_attempts <=0 || number_of_pooled_threads <=0) {
                     if (!failed_to_load_config) {
                         logMessage("Profiledeleter.config file is incomplete, will attempt to load profiledeleter.config.default instead", LOG_TYPE.ERROR, true);
                         failed_to_load_config = true;
@@ -1937,7 +1937,7 @@ public class ProfileDeleter {
                     logMessage("Successfully loaded config file", LOG_TYPE.INFO, true);
                     attempting_to_load_config = false;
                 }
-            } catch (IOException e) {
+            } catch (IOException | NumberFormatException e) {
                 if (!failed_to_load_config) {
                     logMessage("Failed to load profiledeleter.config, will attempt to load profiledeleter.config.default instead", LOG_TYPE.ERROR, true);
                     failed_to_load_config = true;
