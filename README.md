@@ -13,3 +13,5 @@ To do:
 * Remove the need to save REG QUERY results to file.
 
 Bugs:
+
+* Size field does not sort properly in both the main table and the deletion report

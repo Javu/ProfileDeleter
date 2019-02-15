@@ -11,9 +11,11 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
@@ -59,10 +61,10 @@ public class ProfileDeleter {
     private String remote_computer;
     private String users_directory;
     private String local_data_directory;
-    private List<UserData> user_list;
+    private volatile List<UserData> user_list;
     private List<String> cannot_delete_list;
     private List<String> should_not_delete_list;
-    private List<String> log_list;
+    private volatile List<String> log_list;
     private String session_id;
     private String logs_location;
     private String pstools_location;
@@ -75,6 +77,7 @@ public class ProfileDeleter {
     private int registry_sid_deletion_attempts;
     private int registry_guid_deletion_attempts;
     private int number_of_pooled_threads;
+    private int intended_number_of_pooled_threads;
     private boolean size_check;
     private boolean state_check;
     private boolean registry_check;
@@ -83,6 +86,7 @@ public class ProfileDeleter {
     private boolean registry_check_complete;
     private boolean delete_all_users;
     private ActionListener log_updated;
+    private ExecutorService thread_pool;
 
     /**
      * Severity level for logged messages.
@@ -131,8 +135,8 @@ public class ProfileDeleter {
         remote_computer = "";
         users_directory = "";
         local_data_directory = "";
-        user_list = new ArrayList<>();
-        log_list = new ArrayList<>();
+        user_list = Collections.synchronizedList(new ArrayList<UserData>());
+        log_list = Collections.synchronizedList(new ArrayList<String>());
         cannot_delete_list = new ArrayList<>();
         should_not_delete_list = new ArrayList<>();
         session_id = "";
@@ -147,6 +151,7 @@ public class ProfileDeleter {
         registry_sid_deletion_attempts = 0;
         registry_guid_deletion_attempts = 0;
         number_of_pooled_threads = 0;
+        intended_number_of_pooled_threads = 0;
         size_check = false;
         state_check = false;
         registry_check = false;
@@ -155,6 +160,7 @@ public class ProfileDeleter {
         registry_check_complete = false;
         delete_all_users = false;
         this.log_updated = log_updated;
+        thread_pool = null;
         try {
             loadConfigFile();
         } catch (UnrecoverableException e) {
@@ -340,6 +346,22 @@ public class ProfileDeleter {
     }
 
     /**
+     * Sets the intended number of pooled threads attribute.
+     * <p>
+     * The number of pooled threads intended to be used for various lengthy
+     * processes. The actual number of pooled threads used may be less than the
+     * intended number as the program will adjust as necessary.
+     *
+     * @param intended_number_of_pooled_threads the intended number of pooled
+     * threads to use for
+     * various lengthy processes
+     */
+    public void setIntendedNumberOfPooledThreads(int intended_number_of_pooled_threads) {
+        this.intended_number_of_pooled_threads = intended_number_of_pooled_threads;
+        logMessage("Intended number of pooled threads set to " + intended_number_of_pooled_threads, LOG_TYPE.INFO, true);
+    }
+
+    /**
      * Sets the size check attribute.
      * <p>
      * Determines whether a size check is done when checks are run.
@@ -439,7 +461,7 @@ public class ProfileDeleter {
      * the target computer
      */
     public void setUserList(List<UserData> user_list) {
-        this.user_list = user_list;
+        this.user_list = Collections.synchronizedList(user_list);
     }
 
     /**
@@ -474,7 +496,7 @@ public class ProfileDeleter {
      * @param log_list list of logged events
      */
     public void setLogList(List<String> log_list) {
-        this.log_list = log_list;
+        this.log_list = Collections.synchronizedList(log_list);
     }
 
     /**
@@ -646,6 +668,20 @@ public class ProfileDeleter {
     }
 
     /**
+     * Gets the intended number of pooled threads attribute.
+     * <p>
+     * The number of pooled threads intended to be used for various lengthy
+     * processes. The actual number of pooled threads used may be less than the
+     * intended number as the program will adjust as necessary.
+     *
+     * @return the intended number of pooled threads to use for various lengthy
+     * processes
+     */
+    public int getIntendedNumberOfPooledThreads() {
+        return intended_number_of_pooled_threads;
+    }
+
+    /**
      * Gets the size check attribute.
      *
      * @return whether to run a size check or not
@@ -803,42 +839,66 @@ public class ProfileDeleter {
      * deleting the user folder or registry keys
      * @throws NotInitialisedException user list has not been initialised or a
      * state and/or registry check has not been run
+     * @throws InterruptedException the thread pool was interrupted before all
+     * tasks could be completed
      */
-    public List<String> processDeletion() throws NotInitialisedException {
+    public List<String> processDeletion() throws NotInitialisedException, InterruptedException {
         logMessage("Attempting to run deletion on users list", LOG_TYPE.INFO, true);
         if (user_list != null && !user_list.isEmpty() && state_check_complete && registry_check_complete) {
             List<UserData> new_folders = new ArrayList<>();
             List<String> deleted_folders = new ArrayList<>();
             double total_size_deleted = 0.0;
             deleted_folders.add("User" + '\t' + "Deleted Successfully?" + '\t' + "Folder Deleted?" + '\t' + "SID Deleted?" + '\t' + "GUID Deleted?" + '\t' + "SID" + '\t' + "GUID" + '\t' + "Size");
-            ExecutorService thread_pool = Executors.newFixedThreadPool(number_of_pooled_threads);
+            //ExecutorService thread_pool = Executors.newFixedThreadPool(number_of_pooled_threads);
             logMessage("Pooling user deletions for each flagged user", LOG_TYPE.INFO, true);
+            List<delete_user_process> delete_user_process_list = new ArrayList<delete_user_process>();
             for (UserData user : user_list) {
                 if (user.getDelete()) {
                     logMessage("User " + user.getName() + " is flagged for deletion", LOG_TYPE.INFO, true);
                     deleted_folders.add(user.getName());
-                    thread_pool.submit(new delete_user_process(user, this, deleted_folders));
+                    //thread_pool.submit(new delete_user_process(user, this, deleted_folders));
+                    delete_user_process_list.add(new delete_user_process(user, this, deleted_folders));
                 } else {
                     new_folders.add(user);
                 }
             }
             logMessage("All tasks have been scheduled, awaiting task completion", LOG_TYPE.INFO, true);
-            thread_pool.shutdown();
+            /*thread_pool.shutdown();
             boolean thread_pool_terminated = false;
             while (!thread_pool_terminated) {
                 thread_pool_terminated = thread_pool.isTerminated();
-            }
-            logMessage("All tasks completed", LOG_TYPE.INFO, true);
-            if (deleted_folders.size() > 1) {
-                for (int i = 1; i < deleted_folders.size(); i++) {
-                    String[] deleted_user = deleted_folders.get(i).split("\t");
-                    try {
-                        total_size_deleted = Double.parseDouble(deleted_user[7]);
-                    } catch (NumberFormatException e) {
+            }*/
+            try {
+                thread_pool.invokeAll(delete_user_process_list);
+                logMessage("All tasks completed", LOG_TYPE.INFO, true);
+                if (deleted_folders.size() > 1) {
+                    for (int i = 1; i < deleted_folders.size(); i++) {
+                        String[] deleted_user = deleted_folders.get(i).split("\t");
+                        try {
+                            total_size_deleted = Double.parseDouble(deleted_user[7]);
+                        } catch (NumberFormatException e) {
+                        }
                     }
                 }
+            } catch (InterruptedException e) {
+                logMessage("Failed to run pooled delete user tasks, thread pool was interrupted. Error is: " + e.getMessage(), LOG_TYPE.ERROR, true);
+                throw e;
             }
-            user_list = new_folders;
+            user_list = Collections.synchronizedList(new_folders);
+            if (intended_number_of_pooled_threads > 0) {
+                if (intended_number_of_pooled_threads > user_list.size()) {
+                    number_of_pooled_threads = user_list.size();
+                } else {
+                    number_of_pooled_threads = intended_number_of_pooled_threads;
+                }
+                if (thread_pool != null) {
+                    thread_pool.shutdown();
+                    while (!thread_pool.isShutdown()) {
+                    }
+                    thread_pool = null;
+                }
+                thread_pool = Executors.newFixedThreadPool(number_of_pooled_threads);
+            }
             logMessage("Completed deletions", LOG_TYPE.INFO, true);
             if (deleted_folders.size() > 1) {
                 try {
@@ -1051,7 +1111,7 @@ public class ProfileDeleter {
         logMessage("Attempting to build users directory " + users_directory, LOG_TYPE.INFO, true);
         if (users_directory.compareTo("") != 0) {
             try {
-                user_list = new ArrayList<>();
+                user_list = Collections.synchronizedList(new ArrayList<UserData>());
                 String command = "Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process | powershell.exe -File \"" + src_location + "\\GetDirectoryList.ps1\" - directory " + users_directory;
                 ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe", "-Command", command);
                 builder.redirectErrorStream(true);
@@ -1069,6 +1129,20 @@ public class ProfileDeleter {
                     }
                 }
                 power_shell_process.destroy();
+                if (intended_number_of_pooled_threads > 0) {
+                    if (intended_number_of_pooled_threads > user_list.size()) {
+                        number_of_pooled_threads = user_list.size();
+                    } else {
+                        number_of_pooled_threads = intended_number_of_pooled_threads;
+                    }
+                    if (thread_pool != null) {
+                        thread_pool.shutdown();
+                        while (!thread_pool.isShutdown()) {
+                        }
+                        thread_pool = null;
+                    }
+                    thread_pool = Executors.newFixedThreadPool(number_of_pooled_threads);
+                }
                 logMessage("Successfully built users directory " + users_directory, LOG_TYPE.INFO, true);
             } catch (IOException e) {
                 logMessage("Failed to build users directory " + users_directory, LOG_TYPE.ERROR, true);
@@ -1086,23 +1160,34 @@ public class ProfileDeleter {
      * This check can take a very long time depending on the size of the users
      * directory on the target computer.<br>
      * This check is not required to run a deletion.
+     *
+     * @throws InterruptedException the thread pool was interrupted before all
+     * tasks could be completed
      */
-    public void checkSize() {
+    public void checkSize() throws InterruptedException {
         logMessage("Calcuting size of directory list", LOG_TYPE.INFO, true);
         if (user_list.size() > 0 && users_directory.compareTo("") != 0) {
-            ExecutorService thread_pool = Executors.newFixedThreadPool(number_of_pooled_threads);
+            //ExecutorService thread_pool = Executors.newFixedThreadPool(number_of_pooled_threads);
             logMessage("Pooling size check tasks for each user", LOG_TYPE.INFO, true);
+            List<size_check_process> size_check_process_list = new ArrayList<size_check_process>();
             for (int i = 0; i < user_list.size(); i++) {
-                thread_pool.submit(new size_check_process(i, this));
+                //thread_pool.submit(new size_check_process(i, this));
+                size_check_process_list.add(new size_check_process(i, this));
             }
             logMessage("All tasks have been scheduled, awaiting task completion", LOG_TYPE.INFO, true);
-            thread_pool.shutdown();
+            /*thread_pool.shutdown();
             boolean thread_pool_terminated = false;
             while (!thread_pool_terminated) {
                 thread_pool_terminated = thread_pool.isTerminated();
+            }*/
+            try {
+                thread_pool.invokeAll(size_check_process_list);
+                logMessage("All tasks completed", LOG_TYPE.INFO, true);
+                size_check_complete = true;
+            } catch (InterruptedException e) {
+                logMessage("Failed to run pooled size check tasks, thread pool was interrupted. Error is: " + e.getMessage(), LOG_TYPE.ERROR, true);
+                throw e;
             }
-            logMessage("All tasks completed", LOG_TYPE.INFO, true);
-            size_check_complete = true;
             logMessage("Finished calculating size of directory list", LOG_TYPE.INFO, true);
         } else {
             logMessage("Directory list is empty, aborting size calculation", LOG_TYPE.WARNING, true);
@@ -1114,23 +1199,34 @@ public class ProfileDeleter {
      * if the folder can be edited and therefore deleted.
      * <p>
      * This check is required before a deletion can be run.
+     *
+     * @throws InterruptedException the thread pool was interrupted before all
+     * tasks could be completed
      */
-    public void checkState() {
+    public void checkState() throws InterruptedException {
         logMessage("Checking editable state of directory list", LOG_TYPE.INFO, true);
         if (user_list.size() > 0 && users_directory.compareTo("") != 0) {
-            ExecutorService thread_pool = Executors.newFixedThreadPool(number_of_pooled_threads);
+            //ExecutorService thread_pool = Executors.newFixedThreadPool(number_of_pooled_threads);
             logMessage("Pooling state check tasks for each user", LOG_TYPE.INFO, true);
+            List<state_check_process> state_check_process_list = new ArrayList<state_check_process>();
             for (int i = 0; i < user_list.size(); i++) {
-                thread_pool.submit(new state_check_process(i, this));
+                //thread_pool.submit(new state_check_process(i, this));
+                state_check_process_list.add(new state_check_process(i, this));
             }
             logMessage("All tasks have been scheduled, awaiting task completion", LOG_TYPE.INFO, true);
-            thread_pool.shutdown();
+            /*thread_pool.shutdown();
             boolean thread_pool_terminated = false;
             while (!thread_pool_terminated) {
                 thread_pool_terminated = thread_pool.isTerminated();
+            }*/
+            try {
+                thread_pool.invokeAll(state_check_process_list);
+                logMessage("All tasks completed", LOG_TYPE.INFO, true);
+                state_check_complete = true;
+            } catch (InterruptedException e) {
+                logMessage("Failed to run pooled state check tasks, thread pool was interrupted. Error is: " + e.getMessage(), LOG_TYPE.ERROR, true);
+                throw e;
             }
-            logMessage("All tasks completed", LOG_TYPE.INFO, true);
-            state_check_complete = true;
             logMessage("Finished checking editable state of directory list", LOG_TYPE.INFO, true);
         } else {
             logMessage("Directory list is empty, aborting editable state check", LOG_TYPE.WARNING, true);
@@ -1860,16 +1956,38 @@ public class ProfileDeleter {
                         delete_all_users = (Boolean.parseBoolean(line.replace("delete_all_users_default=", "")));
                     } else if (line.startsWith("state_check_attempts=")) {
                         state_check_attempts = (Integer.parseInt(line.replace("state_check_attempts=", "")));
+                        if (state_check_attempts < 1) {
+                            throw new NonNumericException("state_check_attempts must be greater than 0");
+                        }
                     } else if (line.startsWith("registry_check_attempts=")) {
                         registry_check_attempts = (Integer.parseInt(line.replace("registry_check_attempts=", "")));
+                        if (registry_check_attempts < 1) {
+                            throw new NonNumericException("registry_check_attempts must be greater than 0");
+                        }
                     } else if (line.startsWith("folder_deletion_attempts=")) {
                         folder_deletion_attempts = (Integer.parseInt(line.replace("folder_deletion_attempts=", "")));
+                        if (folder_deletion_attempts < 1) {
+                            throw new NonNumericException("folder_deletion_attempts must be greater than 0");
+                        }
                     } else if (line.startsWith("registry_sid_deletion_attempts=")) {
                         registry_sid_deletion_attempts = (Integer.parseInt(line.replace("registry_sid_deletion_attempts=", "")));
+                        if (registry_sid_deletion_attempts < 1) {
+                            throw new NonNumericException("registry_sid_deletion_attempts must be greater than 0");
+                        }
                     } else if (line.startsWith("registry_guid_deletion_attempts=")) {
                         registry_guid_deletion_attempts = (Integer.parseInt(line.replace("registry_guid_deletion_attempts=", "")));
+                        if (registry_guid_deletion_attempts < 1) {
+                            throw new NonNumericException("registry_guid_deletion_attempts must be greater than 0");
+                        }
                     } else if (line.startsWith("number_of_pooled_threads=")) {
-                        number_of_pooled_threads = (Integer.parseInt(line.replace("number_of_pooled_threads=", "")));
+                        if (line.replace("number_of_pooled_threads=", "").equals("max")) {
+                            intended_number_of_pooled_threads = 2147483647;
+                        } else {
+                            intended_number_of_pooled_threads = (Integer.parseInt(line.replace("number_of_pooled_threads=", "")));
+                            if (intended_number_of_pooled_threads < 1) {
+                                throw new NonNumericException("number_of_pooled_threads must be greater than 0");
+                            }
+                        }
                     } else if (line.startsWith("cannot_delete_list=")) {
                         cannot_delete_list.add(line.replace("cannot_delete_list=", ""));
                     } else if (line.startsWith("should_not_delete_list=")) {
@@ -1877,7 +1995,7 @@ public class ProfileDeleter {
                     }
                 }
 
-                if (logs_location == null || logs_location.isEmpty() || pstools_location == null || pstools_location.isEmpty() || reports_location == null || reports_location.isEmpty() || sessions_location == null || sessions_location.isEmpty() || src_location == null || src_location.isEmpty() || state_check_attempts <=0 || registry_check_attempts <=0 || folder_deletion_attempts <=0 || registry_sid_deletion_attempts <=0 || registry_guid_deletion_attempts <=0 || number_of_pooled_threads <=0) {
+                if (logs_location == null || logs_location.isEmpty() || pstools_location == null || pstools_location.isEmpty() || reports_location == null || reports_location.isEmpty() || sessions_location == null || sessions_location.isEmpty() || src_location == null || src_location.isEmpty() || state_check_attempts <= 0 || registry_check_attempts <= 0 || folder_deletion_attempts <= 0 || registry_sid_deletion_attempts <= 0 || registry_guid_deletion_attempts <= 0 || intended_number_of_pooled_threads <= 0) {
                     if (!failed_to_load_config) {
                         logMessage("Profiledeleter.config file is incomplete, will attempt to load profiledeleter.config.default instead", LOG_TYPE.ERROR, true);
                         failed_to_load_config = true;
@@ -1898,7 +2016,7 @@ public class ProfileDeleter {
                     logMessage("Successfully loaded config file", LOG_TYPE.INFO, true);
                     attempting_to_load_config = false;
                 }
-            } catch (IOException | NumberFormatException e) {
+            } catch (IOException | NumberFormatException | NonNumericException e) {
                 if (!failed_to_load_config) {
                     logMessage("Failed to load profiledeleter.config, will attempt to load profiledeleter.config.default instead", LOG_TYPE.ERROR, true);
                     failed_to_load_config = true;
@@ -2075,7 +2193,7 @@ public class ProfileDeleter {
     }
 }
 
-class size_check_process implements Runnable {
+class size_check_process implements Callable<Object> {
 
     private int index;
     private ProfileDeleter profile_deleter;
@@ -2086,7 +2204,7 @@ class size_check_process implements Runnable {
     }
 
     @Override
-    public void run() {
+    public Object call() {
         String folder = profile_deleter.getUserList().get(index).getName();
         String folder_size = "";
         try {
@@ -2098,10 +2216,11 @@ class size_check_process implements Runnable {
             profile_deleter.logMessage(e.getMessage(), ProfileDeleter.LOG_TYPE.ERROR, true);
         }
         profile_deleter.getUserList().get(index).setSize(folder_size);
+        return null;
     }
 }
 
-class state_check_process implements Runnable{
+class state_check_process implements Callable<Object> {
 
     private int index;
     private ProfileDeleter profile_deleter;
@@ -2112,7 +2231,7 @@ class state_check_process implements Runnable{
     }
 
     @Override
-    public void run() {
+    public Object call() {
         String user = profile_deleter.getUserList().get(index).getName();
         String folder_size = "";
         profile_deleter.logMessage("Checking editable state of folder " + user, ProfileDeleter.LOG_TYPE.INFO, true);
@@ -2158,10 +2277,11 @@ class state_check_process implements Runnable{
             profile_deleter.logMessage("Editable state check has failed, you may not have permission to rename folders in the user directory or PC may be offline", ProfileDeleter.LOG_TYPE.ERROR, true);
             profile_deleter.logMessage(e.getMessage(), ProfileDeleter.LOG_TYPE.ERROR, true);
         }
+        return null;
     }
 }
 
-class delete_user_process implements Runnable {
+class delete_user_process implements Callable<Object> {
 
     private UserData user;
     private ProfileDeleter profile_deleter;
@@ -2174,7 +2294,7 @@ class delete_user_process implements Runnable {
     }
 
     @Override
-    public void run() {
+    public Object call() {
         profile_deleter.logMessage("User " + user.getName() + " is flagged for deletion", ProfileDeleter.LOG_TYPE.INFO, true);
         boolean folder_delete = false;
         boolean sid_delete = false;
@@ -2191,7 +2311,7 @@ class delete_user_process implements Runnable {
                 folder_delete = true;
                 profile_deleter.logMessage("Successfully deleted user directory for " + user.getName(), ProfileDeleter.LOG_TYPE.INFO, true);
             } catch (IOException | CannotEditException | InterruptedException e) {
-                if (error_count >= profile_deleter.getFolderDeletionAttempts()-1) {
+                if (error_count >= profile_deleter.getFolderDeletionAttempts() - 1) {
                     String message = "Failed to delete user directory " + user.getName() + ". Error is " + e.getMessage();
                     deleted_user_folder_success = message;
                     profile_deleter.logMessage(message, ProfileDeleter.LOG_TYPE.ERROR, true);
@@ -2214,7 +2334,7 @@ class delete_user_process implements Runnable {
                 }
                 sid_delete = true;
             } catch (IOException | CannotEditException | InterruptedException e) {
-                if (error_count >= profile_deleter.getRegistrySidDeletionAttempts()-1) {
+                if (error_count >= profile_deleter.getRegistrySidDeletionAttempts() - 1) {
                     String message = "Failed to delete user SID " + user.getSid() + " from registry. Error is " + e.getMessage();
                     deleted_user_sid_success = message;
                     profile_deleter.logMessage(message, ProfileDeleter.LOG_TYPE.ERROR, true);
@@ -2237,7 +2357,7 @@ class delete_user_process implements Runnable {
                 }
                 guid_delete = true;
             } catch (IOException | CannotEditException | InterruptedException e) {
-                if (error_count >= profile_deleter.getRegistryGuidDeletionAttempts()-1) {
+                if (error_count >= profile_deleter.getRegistryGuidDeletionAttempts() - 1) {
                     String message = "Failed to delete user GUID " + user.getGuid() + " from registry. Error is " + e.getMessage();
                     deleted_user_guid_success = message;
                     profile_deleter.logMessage(message, ProfileDeleter.LOG_TYPE.ERROR, true);
@@ -2253,5 +2373,6 @@ class delete_user_process implements Runnable {
             }
         }
         deleted_folders.set(deleted_folders.indexOf(user.getName()), user.getName() + '\t' + deleted_user_success + '\t' + deleted_user_folder_success + '\t' + deleted_user_sid_success + '\t' + deleted_user_guid_success + '\t' + user.getSid() + '\t' + user.getGuid() + '\t' + user.getSize());
+        return null;
     }
 }
