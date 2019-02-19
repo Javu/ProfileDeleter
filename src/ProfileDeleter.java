@@ -18,6 +18,7 @@ import java.util.TimeZone;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 /**
@@ -62,6 +63,7 @@ public class ProfileDeleter {
     private String users_directory;
     private String local_data_directory;
     private volatile List<UserData> user_list;
+    private volatile List<String> users_deleted;
     private List<String> cannot_delete_list;
     private List<String> should_not_delete_list;
     private volatile List<String> log_list;
@@ -71,6 +73,7 @@ public class ProfileDeleter {
     private String reports_location;
     private String sessions_location;
     private String src_location;
+    private AtomicInteger number_of_users_deleted;
     private int state_check_attempts;
     private int registry_check_attempts;
     private int folder_deletion_attempts;
@@ -136,6 +139,7 @@ public class ProfileDeleter {
         users_directory = "";
         local_data_directory = "";
         user_list = Collections.synchronizedList(new ArrayList<UserData>());
+        users_deleted = Collections.synchronizedList(new ArrayList<String>());
         log_list = Collections.synchronizedList(new ArrayList<String>());
         cannot_delete_list = new ArrayList<>();
         should_not_delete_list = new ArrayList<>();
@@ -145,6 +149,7 @@ public class ProfileDeleter {
         reports_location = "";
         sessions_location = "";
         src_location = "";
+        number_of_users_deleted = new AtomicInteger(0);
         state_check_attempts = 0;
         registry_check_attempts = 0;
         folder_deletion_attempts = 0;
@@ -592,6 +597,18 @@ public class ProfileDeleter {
     }
 
     /**
+     * Gets the number of users deleted attribute.
+     * <p>
+     * The number of users that have been deleted in the current run of
+     * processDeletion.
+     *
+     * @return the number of users that have currently been deleted
+     */
+    public AtomicInteger getNumberOfUsersDeleted() {
+        return number_of_users_deleted;
+    }
+
+    /**
      * Gets the state check attempts attribute.
      * <p>
      * The number of times a state check should be rerun before determining a
@@ -755,6 +772,15 @@ public class ProfileDeleter {
     }
 
     /**
+     * Gets the users deleted attribute.
+     *
+     * @return the list of users deleted by the processDeletion function
+     */
+    public List<String> getUsersDeleted() {
+        return users_deleted;
+    }
+
+    /**
      * Gets the cannot delete list attribute.
      * <p>
      * The users in this list cannot be deleted, regardless of their editable
@@ -846,18 +872,19 @@ public class ProfileDeleter {
         logMessage("Attempting to run deletion on users list", LOG_TYPE.INFO, true);
         if (user_list != null && !user_list.isEmpty() && state_check_complete && registry_check_complete) {
             List<UserData> new_folders = new ArrayList<>();
-            List<String> deleted_folders = new ArrayList<>();
+            users_deleted = Collections.synchronizedList(new ArrayList<String>());
+            number_of_users_deleted.set(0);
             double total_size_deleted = 0.0;
-            deleted_folders.add("User" + '\t' + "Deleted Successfully?" + '\t' + "Folder Deleted?" + '\t' + "SID Deleted?" + '\t' + "GUID Deleted?" + '\t' + "SID" + '\t' + "GUID" + '\t' + "Size");
+            users_deleted.add("User" + '\t' + "Deleted Successfully?" + '\t' + "Folder Deleted?" + '\t' + "SID Deleted?" + '\t' + "GUID Deleted?" + '\t' + "SID" + '\t' + "GUID" + '\t' + "Size");
             //ExecutorService thread_pool = Executors.newFixedThreadPool(number_of_pooled_threads);
             logMessage("Pooling user deletions for each flagged user", LOG_TYPE.INFO, true);
             List<delete_user_process> delete_user_process_list = new ArrayList<delete_user_process>();
             for (UserData user : user_list) {
                 if (user.getDelete()) {
                     logMessage("User " + user.getName() + " is flagged for deletion", LOG_TYPE.INFO, true);
-                    deleted_folders.add(user.getName());
-                    //thread_pool.submit(new delete_user_process(user, this, deleted_folders));
-                    delete_user_process_list.add(new delete_user_process(user, this, deleted_folders));
+                    users_deleted.add(user.getName());
+                    //thread_pool.submit(new delete_user_process(user, this, users_deleted));
+                    delete_user_process_list.add(new delete_user_process(user, this, users_deleted, number_of_users_deleted));
                 } else {
                     new_folders.add(user);
                 }
@@ -871,9 +898,9 @@ public class ProfileDeleter {
             try {
                 thread_pool.invokeAll(delete_user_process_list);
                 logMessage("All tasks completed", LOG_TYPE.INFO, true);
-                if (deleted_folders.size() > 1) {
-                    for (int i = 1; i < deleted_folders.size(); i++) {
-                        String[] deleted_user = deleted_folders.get(i).split("\t");
+                if (users_deleted.size() > 1) {
+                    for (int i = 1; i < users_deleted.size(); i++) {
+                        String[] deleted_user = users_deleted.get(i).split("\t");
                         try {
                             total_size_deleted = Double.parseDouble(deleted_user[7]);
                         } catch (NumberFormatException e) {
@@ -900,13 +927,13 @@ public class ProfileDeleter {
                 thread_pool = Executors.newFixedThreadPool(number_of_pooled_threads);
             }
             logMessage("Completed deletions", LOG_TYPE.INFO, true);
-            if (deleted_folders.size() > 1) {
+            if (users_deleted.size() > 1) {
                 try {
                     List<String> formatted_report = new ArrayList<String>();
                     formatted_report.add("Deletion Report");
                     formatted_report.add("Computer: " + remote_computer);
                     formatted_report.add("Total Size Deleted: " + Long.toString(Math.round(total_size_deleted)));
-                    for (String deleted_folder : deleted_folders) {
+                    for (String deleted_folder : users_deleted) {
                         formatted_report.add(deleted_folder);
                     }
                     writeToFile(reports_location + "\\" + remote_computer + "_deletion_report_" + session_id + ".txt", formatted_report);
@@ -915,7 +942,7 @@ public class ProfileDeleter {
                     logMessage("Failed to write deletion report to file " + reports_location + "\\" + remote_computer + "_deletion_report_" + session_id + ".txt. Error is: " + e.getMessage(), LOG_TYPE.ERROR, true);
                 }
             }
-            return deleted_folders;
+            return users_deleted;
         } else {
             String message = "Either user list has not been initialised or a state and/or registry check has not been run";
             logMessage(message, LOG_TYPE.WARNING, true);
@@ -2286,11 +2313,13 @@ class delete_user_process implements Callable<Object> {
     private UserData user;
     private ProfileDeleter profile_deleter;
     private List<String> deleted_folders;
+    private AtomicInteger number_of_users_deleted;
 
-    delete_user_process(UserData user, ProfileDeleter profile_deleter, List<String> deleted_folders) {
+    delete_user_process(UserData user, ProfileDeleter profile_deleter, List<String> deleted_folders, AtomicInteger number_of_users_deleted) {
         this.user = user;
         this.profile_deleter = profile_deleter;
         this.deleted_folders = deleted_folders;
+        this.number_of_users_deleted = number_of_users_deleted;
     }
 
     @Override
@@ -2373,6 +2402,7 @@ class delete_user_process implements Callable<Object> {
             }
         }
         deleted_folders.set(deleted_folders.indexOf(user.getName()), user.getName() + '\t' + deleted_user_success + '\t' + deleted_user_folder_success + '\t' + deleted_user_sid_success + '\t' + deleted_user_guid_success + '\t' + user.getSid() + '\t' + user.getGuid() + '\t' + user.getSize());
+        number_of_users_deleted.incrementAndGet();
         return null;
     }
 }

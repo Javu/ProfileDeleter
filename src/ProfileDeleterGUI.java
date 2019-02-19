@@ -60,6 +60,9 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     String help_text;
     Color uneditable_color;
     String deletion_report_string;
+    boolean running_deletion;
+    boolean computer_set;
+    int number_of_users_selected_for_deletion;
 
     /**
      * Swing GUI elements.
@@ -149,6 +152,9 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         help_location = "";
         uneditable_color = new Color(235, 235, 235);
         deletion_report_string = "";
+        running_deletion = false;
+        computer_set = false;
+        number_of_users_selected_for_deletion = 0;
 
         // Loads the GUI Configuration settings from the profiledeleter.config file.
         List<String> config = new ArrayList<>();
@@ -552,6 +558,46 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         setVisible(true);
     }
 
+    private void setFormattedTitle() {
+        String title = "Profile Deleter";
+        if(profile_deleter != null && profile_deleter.getRemoteComputer() != null && !profile_deleter.getRemoteComputer().equals("")) {
+            title += " - " + profile_deleter.getRemoteComputer();
+            int number_of_users_deleted = 0;
+            if (profile_deleter.getSizeCheckComplete()) {
+                double total_size = 0.0;
+                double selected_size = 0.0;
+                for (UserData user : profile_deleter.getUserList()) {
+                    double size_as_double = 0.0;
+                    try {
+                        size_as_double += Double.parseDouble(user.getSize());
+                    } catch(NumberFormatException e) {}
+                    if(size_as_double > 0.0) {
+                        total_size += size_as_double;
+                        if(user.getDelete()) {
+                            selected_size += size_as_double;
+                        }
+                    }
+                }
+                title += " - Total Users Size: " + doubleToFormattedString(total_size / (1024.0 * 1024.0)) + " MB - Total size selected for deletion: " + doubleToFormattedString(selected_size / (1024.0 * 1024.0)) + " MB";
+            }
+            if(running_deletion) {
+                number_of_users_deleted = profile_deleter.getNumberOfUsersDeleted().get();
+                title += " - Users deleted: " + number_of_users_deleted + "/" + number_of_users_selected_for_deletion;
+            } else {
+                if(computer_set) {
+                    number_of_users_selected_for_deletion = 0;
+                    for(UserData user : profile_deleter.getUserList()) {
+                        if(user.getDelete()){
+                            number_of_users_selected_for_deletion++;
+                        }
+                    }
+                    title += " - Users selected: " + number_of_users_selected_for_deletion;
+                }
+            }
+        }
+        setTitle(title);
+    }
+    
     /**
      * Converts a double value to a formatted String value.
      * <p>
@@ -565,17 +611,17 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     private String doubleToFormattedString(Double format_value) {
         long double_to_long = Math.round(format_value);
         String double_to_long_string = Long.toString(double_to_long);
-        String foramatted_string = "";
+        String formatted_string = "";
         int count = 0;
         for (int i = double_to_long_string.length() - 1; i >= 0; i--) {
             if (count == 3) {
-                foramatted_string = "," + foramatted_string;
+                formatted_string = "," + formatted_string;
                 count = 0;
             }
-            foramatted_string = double_to_long_string.charAt(i) + foramatted_string;
+            formatted_string = double_to_long_string.charAt(i) + formatted_string;
             count++;
         }
-        return foramatted_string;
+        return formatted_string;
     }
 
     /**
@@ -748,6 +794,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 if (system_console_text_area != null) {
                     writeLogToSystemConsole();
                 }
+                setFormattedTitle();
                 break;
             case "SetComputer":
                 setComputerButton();
@@ -905,6 +952,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     private void deleteAllUsersCheckbox() {
         profile_deleter.setDeleteAllUsers(delete_all_users_checkbox.isSelected());
         updateTableData();
+        setFormattedTitle();
     }
 
     /**
@@ -1110,6 +1158,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         if (column == 0) {
             profile_deleter.getUserList().get(row).setDelete(Boolean.parseBoolean(data.toString()));
+            setFormattedTitle();
         }
     }
 
@@ -1124,23 +1173,14 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         protected Object doInBackground() throws Exception {
             ping_success = profile_deleter.pingPC(computer_name_text_field.getText());
             if (ping_success) {
+                computer_set = false;
                 profile_deleter.setSizeCheckComplete(false);
                 profile_deleter.setStateCheckComplete(false);
                 profile_deleter.setRegistryCheckComplete(false);
                 profile_deleter.setRemoteComputer(computer_name_text_field.getText());
                 profile_deleter.generateUserList();
                 profile_deleter.checkAll();
-                if (profile_deleter.getSizeCheckComplete()) {
-                    double total_size = 0.0;
-                    for (UserData user : profile_deleter.getUserList()) {
-                        if(!user.getSize().equals("Could not calculate size")) {
-                            total_size += Double.parseDouble(user.getSize());
-                        }
-                    }
-                    setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer() + " - Total Users Size: " + doubleToFormattedString(total_size / (1024.0 * 1024.0)) + " MB");
-                } else {
-                    setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer());
-                }
+                computer_set = true;
             } else {
                 profile_deleter.logMessage("Unable to ping computer, computer not set", ProfileDeleter.LOG_TYPE.WARNING, true);
             }
@@ -1164,6 +1204,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             delete_all_users_checkbox.setEnabled(true);
             write_log_button.setEnabled(true);
             results_table.setEnabled(true);
+            setFormattedTitle();
         }
     }
 
@@ -1176,13 +1217,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         protected Object doInBackground() throws Exception {
             if (profile_deleter.getRemoteComputer() != null && !profile_deleter.getRemoteComputer().isEmpty()) {
                 profile_deleter.checkAll();
-                if (profile_deleter.getSizeCheckComplete()) {
-                    double total_size = 0.0;
-                    for (UserData user : profile_deleter.getUserList()) {
-                        total_size += Double.parseDouble(user.getSize());
-                    }
-                    setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer() + " - Total Users Size: " + doubleToFormattedString(total_size / (1024.0 * 1024.0)) + " MB");
-                }
+                setFormattedTitle();
             }
             return new Object();
         }
@@ -1244,6 +1279,13 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         @Override
         protected Object doInBackground() throws Exception {
+            running_deletion = true;
+            number_of_users_selected_for_deletion = 0;
+            for(UserData user : profile_deleter.getUserList()) {
+                if(user.getDelete()){
+                    number_of_users_selected_for_deletion++;
+                }
+            }
             List<String> deleted_users = profile_deleter.processDeletion();
             deleted_users.add(0, "Deletion report:");
             if (deleted_users.size() > 2) {
@@ -1251,15 +1293,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                     system_console_text_area.append('\n' + deleted_user);
                 }
                 displayDeletionReport(deleted_users);
-                if (profile_deleter.getSizeCheckComplete()) {
-                    double total_size = 0.0;
-                    for (UserData user : profile_deleter.getUserList()) {
-                        try {
-                            total_size += Double.parseDouble(user.getSize());
-                        } catch(NumberFormatException e) {}
-                    }
-                    setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer() + " - Total Users Size: " + doubleToFormattedString(total_size / (1024.0 * 1024.0)) + " MB");
-                }
+                setFormattedTitle();
             } else {
                 profile_deleter.logMessage("Nothing was flagged for deletion", ProfileDeleter.LOG_TYPE.WARNING, true);
             }
@@ -1281,6 +1315,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             delete_all_users_checkbox.setEnabled(true);
             write_log_button.setEnabled(true);
             results_table.setEnabled(true);
+            running_deletion = false;
         }
     }
 }
