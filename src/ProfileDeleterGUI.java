@@ -1220,8 +1220,8 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         @Override
         public int compare(String o1, String o2) {
             int strings_compared = 0;
-            String o1_stripped = o1.replaceAll("\\D", "");
-            String o2_stripped = o2.replaceAll("\\D", "");
+            String o1_stripped = o1.replaceAll("[^0-9]", "");
+            String o2_stripped = o2.replaceAll("[^0-9]", "");
             if (o1_stripped.isEmpty()) {
                 o1_stripped = "-2147483648";
             }
