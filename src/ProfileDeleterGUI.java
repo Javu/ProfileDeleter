@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -31,12 +32,17 @@ import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
+import javax.swing.RowSorter;
+import javax.swing.RowSorter.SortKey;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.SortOrder;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.ToolTipManager;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.event.RowSorterEvent;
+import javax.swing.event.RowSorterListener;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -755,28 +761,14 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         results_table.getColumnModel().getColumn(4).setCellRenderer(default_renderer);
         results_table.getColumnModel().getColumn(5).setCellRenderer(default_renderer);
         results_table.getColumnModel().getColumn(6).setCellRenderer(default_renderer);
-        //results_table.setAutoCreateRowSorter(true);
-        TableRowSorter sorter = new TableRowSorter();
+        results_table.setAutoCreateRowSorter(false);
+        tableRowSorterWithPreferredColumn sorter = new tableRowSorterWithPreferredColumn(new ArrayList<Integer>(Arrays.asList(1)), SortOrder.ASCENDING, results_table.getModel());
         formattedSizeComparator size_comparator = new formattedSizeComparator();
         results_table.setRowSorter(sorter);
-        sorter.setModel(results_table.getModel());
         sorter.setComparator(3, size_comparator);
-        /*sorter.setComparator(3, new Comparator() {
-            @Override
-            public int compare(Object o1, Object o2) {
-                int strings_compared = 0;
-                String o1_stripped = o1.toString().replaceAll("\\D", "");
-                String o2_stripped = o2.toString().replaceAll("\\D", "");
-                if (o1_stripped.isEmpty()) {
-                    o1_stripped = "-2147483648";
-                }
-                if (o2_stripped.isEmpty()) {
-                    o2_stripped = "-2147483648";
-                }
-                strings_compared = Integer.compare(Integer.parseInt(o1_stripped), Integer.parseInt(o2_stripped));
-                return strings_compared;
-            }
-        });*/
+        List<RowSorter.SortKey> sort_keys = new ArrayList<RowSorter.SortKey>();
+        sort_keys.add(new RowSorter.SortKey(1, SortOrder.ASCENDING));
+        sorter.setSortKeys(sort_keys);
         results_table.getModel().addTableModelListener(this);
     }
 
@@ -1091,11 +1083,12 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 @Override
                 public Component getTableCellRendererComponent(JTable table, Object value, boolean is_selected, boolean has_focus, int row, int column) {
                     Component tableCellRendererComponent = super.getTableCellRendererComponent(table, value, is_selected, has_focus, row, column);
+                    ((DefaultTableCellRenderer) tableCellRendererComponent).setHorizontalAlignment(DefaultTableCellRenderer.LEFT);
+                    ((DefaultTableCellRenderer) tableCellRendererComponent).setVerticalAlignment(DefaultTableCellRenderer.TOP);
                     if (!(table.getModel().getValueAt(table.convertRowIndexToModel(row), 1)).toString().equals("Yes")) {
                         tableCellRendererComponent.setForeground(Color.WHITE);
                         tableCellRendererComponent.setBackground(Color.DARK_GRAY);
                     } else {
-
                         tableCellRendererComponent.setForeground(Color.BLACK);
                         tableCellRendererComponent.setBackground(Color.WHITE);
                     }
@@ -1108,6 +1101,8 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 @Override
                 public Component getTableCellRendererComponent(JTable table, Object value, boolean is_selected, boolean has_focus, int row, int column) {
                     Component tableCellRendererComponent = super.getTableCellRendererComponent(table, value, is_selected, has_focus, row, column);
+                    ((DefaultTableCellRenderer) tableCellRendererComponent).setHorizontalAlignment(DefaultTableCellRenderer.LEFT);
+                    ((DefaultTableCellRenderer) tableCellRendererComponent).setVerticalAlignment(DefaultTableCellRenderer.TOP);
                     if (!(table.getModel().getValueAt(table.convertRowIndexToModel(row), 1)).toString().equals("Yes")) {
                         tableCellRendererComponent.setForeground(Color.WHITE);
                         tableCellRendererComponent.setBackground(Color.DARK_GRAY);
@@ -1148,6 +1143,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                     }
                     //if(right_align) {
                     ((DefaultTableCellRenderer) tableCellRendererComponent).setHorizontalAlignment(DefaultTableCellRenderer.RIGHT);
+                    ((DefaultTableCellRenderer) tableCellRendererComponent).setVerticalAlignment(DefaultTableCellRenderer.TOP);
                     //} else {
                     //    ((DefaultTableCellRenderer) tableCellRendererComponent).setHorizontalAlignment(DefaultTableCellRenderer.LEFT);
                     //}
@@ -1158,34 +1154,21 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             deletion_report_frame_table.setModel(new DefaultTableModel(deletion_report_content, deletion_report_headings));
             deletion_report_frame_table.getColumnModel().getColumn(0).setCellRenderer(default_renderer);
             deletion_report_frame_table.getColumnModel().getColumn(1).setCellRenderer(deletion_successful_renderer);
-            deletion_report_frame_table.getColumnModel().getColumn(2).setCellRenderer(default_renderer);
-            deletion_report_frame_table.getColumnModel().getColumn(3).setCellRenderer(default_renderer);
-            deletion_report_frame_table.getColumnModel().getColumn(4).setCellRenderer(default_renderer);
+            deletion_report_frame_table.getColumnModel().getColumn(2).setCellRenderer(new possibleErrorRenderer());
+            deletion_report_frame_table.getColumnModel().getColumn(3).setCellRenderer(new possibleErrorRenderer());
+            deletion_report_frame_table.getColumnModel().getColumn(4).setCellRenderer(new possibleErrorRenderer());
             deletion_report_frame_table.getColumnModel().getColumn(5).setCellRenderer(default_renderer);
             deletion_report_frame_table.getColumnModel().getColumn(6).setCellRenderer(default_renderer);
             deletion_report_frame_table.getColumnModel().getColumn(7).setCellRenderer(size_renderer);
-            //deletion_report_frame_table.setAutoCreateRowSorter(true);
-            TableRowSorter sorter = new TableRowSorter();
+            deletion_report_frame_table.setAutoCreateRowSorter(false);
+            tableRowSorterWithPreferredColumn sorter = new tableRowSorterWithPreferredColumn(new ArrayList<Integer>(Arrays.asList(1,0)), SortOrder.ASCENDING, deletion_report_frame_table.getModel());
             formattedSizeComparator size_comparator = new formattedSizeComparator();
-            results_table.setRowSorter(sorter);
-            sorter.setModel(results_table.getModel());
+            deletion_report_frame_table.setRowSorter(sorter);
             sorter.setComparator(7, size_comparator);
-            /*sorter.setComparator(3, new Comparator() {
-                @Override
-                public int compare(Object o1, Object o2) {
-                    int strings_compared = 0;
-                    String o1_stripped = o1.toString().replaceAll("\\D", "");
-                    String o2_stripped = o2.toString().replaceAll("\\D", "");
-                    if (o1_stripped.isEmpty()) {
-                        o1_stripped = "-2147483648";
-                    }
-                    if (o2_stripped.isEmpty()) {
-                        o2_stripped = "-2147483648";
-                    }
-                    strings_compared = Integer.compare(Integer.parseInt(o1_stripped), Integer.parseInt(o2_stripped));
-                    return strings_compared;
-                }
-            });*/
+            List<RowSorter.SortKey> sort_keys = new ArrayList<RowSorter.SortKey>();
+            sort_keys.add(new RowSorter.SortKey(1, SortOrder.ASCENDING));
+            sort_keys.add(new RowSorter.SortKey(0, SortOrder.ASCENDING));
+            sorter.setSortKeys(sort_keys);
             deletion_report_frame.setVisible(true);
         }
     }
@@ -1211,29 +1194,163 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     }
 
     /**
-     * Strips all non-numeric characters from each String, then compares the int
-     * values returned. If the string has no numeric characters it is counted as
-     * int value -2147483648.
+     * Strips all non-numeric characters except the first period as long as it
+     * is not at the end of the String from each String, then compares the
+     * double values returned. If the string has no numeric characters it is
+     * counted as double value -Double.MAX_VALUE.
      */
     private class formattedSizeComparator implements Comparator<String> {
 
         @Override
         public int compare(String o1, String o2) {
             int strings_compared = 0;
-            String o1_stripped = o1.replaceAll("[^0-9]", "");
-            String o2_stripped = o2.replaceAll("[^0-9]", "");
+            String o1_stripped = o1.replaceAll("([^0-9.])|(\\.$)", "");
+            String o2_stripped = o2.replaceAll("([^0-9.])|(\\.$)", "");
             if (o1_stripped.isEmpty()) {
-                o1_stripped = "-2147483648";
+                o1_stripped = Double.toString(-Double.MAX_VALUE);
+            } else {
+                String[] o1_split = o1_stripped.split("\\.");
+                if(o1_split.length > 1) {
+                    boolean first_period = false;
+                    String o1_cleaned = "";
+                    for(String characters : o1_split) {
+                        if(!first_period) {
+                            o1_cleaned += characters + ".";
+                            first_period = true;
+                        } else {
+                            o1_cleaned += characters;
+                        }
+                    }
+                    o1_stripped = o1_cleaned;
+                }
             }
             if (o2_stripped.isEmpty()) {
-                o2_stripped = "-2147483648";
+                o2_stripped = Double.toString(-Double.MAX_VALUE);
+            } else {
+                String[] o2_split = o2_stripped.split("\\.");
+                if(o2_split.length > 1) {
+                    boolean first_period = false;
+                    String o2_cleaned = "";
+                    for(String characters : o2_split) {
+                        if(!first_period) {
+                            o2_cleaned += characters + ".";
+                            first_period = true;
+                        } else {
+                            o2_cleaned += characters;
+                        }
+                    }
+                    o2_stripped = o2_cleaned;
+                }
             }
-            strings_compared = Integer.compare(Integer.parseInt(o1_stripped), Integer.parseInt(o2_stripped));
+            Double o1_converted;
+            Double o2_converted;
+            try {
+                o1_converted = Double.parseDouble(o1_stripped);
+            } catch(NumberFormatException e) {
+                o1_converted = -Double.MAX_VALUE;
+            }
+            try {
+                o2_converted = Double.parseDouble(o2_stripped);
+            } catch(NumberFormatException e) {
+                o2_converted = -Double.MAX_VALUE;
+            }
+            strings_compared = Double.compare(o1_converted, o2_converted);
             return strings_compared;
         }
 
     }
 
+    private class tableRowSorterWithPreferredColumn<M extends TableModel> extends TableRowSorter<M> {
+        List<Integer> column_preferences;
+        SortOrder preferred_sort_order;
+        boolean first_sort;
+        int last_column_sorted;
+        
+        public tableRowSorterWithPreferredColumn(M model) {
+            column_preferences = new ArrayList<>(Arrays.asList(0));
+            preferred_sort_order = SortOrder.ASCENDING;
+            first_sort = true;
+            last_column_sorted = -1;
+            setModel(model);
+        }
+        
+        public tableRowSorterWithPreferredColumn(List<Integer> column_preferences, SortOrder preferred_sort_order, M model) {
+            this.column_preferences = column_preferences;
+            this.preferred_sort_order = preferred_sort_order;
+            first_sort = true;
+            last_column_sorted = -1;
+            setModel(model);
+        }
+        
+        @Override
+        public void toggleSortOrder(int column) {
+            List<? extends SortKey> sort_keys = getSortKeys();
+            if(sort_keys.size() == 0) {
+                generateSortKeys(column, SortOrder.ASCENDING);
+                return;
+            }
+            
+            if(sort_keys.size() > 0 && last_column_sorted == column || first_sort) {
+                if(first_sort) {
+                    first_sort = false;
+                    last_column_sorted = column;
+                    if(column != sort_keys.get(0).getColumn()) {
+                        generateSortKeys(column, SortOrder.ASCENDING);
+                        return;
+                    }
+                }
+                List<SortKey> new_keys = new ArrayList<SortKey>(getSortKeys());
+                SortOrder new_sort_order;
+                if(new_keys.get(0).getSortOrder() == SortOrder.ASCENDING) {
+                    new_sort_order = SortOrder.DESCENDING;
+                } else {
+                    new_sort_order = SortOrder.ASCENDING;
+                }
+                generateSortKeys(column, new_sort_order);
+                return;
+            } else if(sort_keys.size() > 0 && last_column_sorted != column && !first_sort) {
+                generateSortKeys(column, SortOrder.ASCENDING);
+                last_column_sorted = column;
+                return; 
+            }
+            super.toggleSortOrder(column);
+        }
+        private void generateSortKeys(int first_column, SortOrder first_column_sort_order) {
+            List<SortKey> new_keys = new ArrayList<SortKey>();
+            new_keys.add(new SortKey(first_column, first_column_sort_order));
+            for(int preferred_column : column_preferences) {
+                if(first_column != preferred_column) {
+                    new_keys.add(new SortKey(preferred_column, preferred_sort_order));
+                }
+            }
+            setSortKeys(new_keys);
+        }
+    }
+    
+    // Default renderer for table columns.
+    private class possibleErrorRenderer extends JTextArea implements TableCellRenderer{
+        possibleErrorRenderer() {
+            setLineWrap(true);
+            setWrapStyleWord(true);
+        }
+        
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean is_selected, boolean has_focus, int row, int column) {
+            setText(value.toString());
+            setSize(table.getColumnModel().getColumn(column).getWidth(), getPreferredSize().height);
+            if(table.getRowHeight(row) < getPreferredSize().height) {
+                table.setRowHeight(row, getPreferredSize().height);
+            }
+            if (!(table.getModel().getValueAt(table.convertRowIndexToModel(row), 1)).toString().equals("Yes")) {
+                this.setForeground(Color.WHITE);
+                this.setBackground(Color.DARK_GRAY);
+            } else {
+                this.setForeground(Color.BLACK);
+                this.setBackground(Color.WHITE);
+            }
+            return this;
+        }
+    };
+    
     /**
      * SwingWorker thread used to run the setComputer function from the GUI.
      */
