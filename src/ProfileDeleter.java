@@ -875,7 +875,7 @@ public class ProfileDeleter {
             users_deleted = Collections.synchronizedList(new ArrayList<String>());
             number_of_users_deleted.set(0);
             double total_size_deleted = 0.0;
-            users_deleted.add("User" + '\t' + "Deleted Successfully?" + '\t' + "Folder Deleted?" + '\t' + "SID Deleted?" + '\t' + "GUID Deleted?" + '\t' + "SID" + '\t' + "GUID" + '\t' + "Size");
+            users_deleted.add("User" + '\t' + "Successful?" + '\t' + "Folder Deleted?" + '\t' + "SID Deleted?" + '\t' + "GUID Deleted?" + '\t' + "SID" + '\t' + "GUID" + '\t' + "Size");
             //ExecutorService thread_pool = Executors.newFixedThreadPool(number_of_pooled_threads);
             logMessage("Pooling user deletions for each flagged user", LOG_TYPE.INFO, true);
             List<delete_user_process> delete_user_process_list = new ArrayList<delete_user_process>();
