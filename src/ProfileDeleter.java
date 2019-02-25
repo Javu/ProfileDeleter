@@ -346,8 +346,39 @@ public class ProfileDeleter {
      * various lengthy processes
      */
     public void setNumberOfPooledThreads(int number_of_pooled_threads) {
-        this.number_of_pooled_threads = number_of_pooled_threads;
-        logMessage("Number of pooled threads set to " + number_of_pooled_threads, LOG_TYPE.INFO, true);
+        logMessage("Attempting to set number of pooled threads to " + number_of_pooled_threads, LOG_TYPE.INFO, true);
+        intended_number_of_pooled_threads = number_of_pooled_threads;
+        int number_of_pooled_threads_to_initialise = 0;
+        boolean initialise_thread_pool = true;
+        if (this.number_of_pooled_threads < 1) {
+            logMessage("Thread pool has not been previously initialised", LOG_TYPE.INFO, true);
+            if (user_list != null && user_list.size() > 0 && number_of_pooled_threads > user_list.size()) {
+                number_of_pooled_threads_to_initialise = user_list.size();
+                logMessage("Number to set pooled threads to is greater than the size of the user list, using user list size instead", LOG_TYPE.INFO, true);
+            } else {
+                number_of_pooled_threads_to_initialise = number_of_pooled_threads;
+            }
+        } else {
+            if (number_of_pooled_threads <= this.number_of_pooled_threads) {
+                initialise_thread_pool = false;
+                logMessage("Thread pool has already been initialised with a higher number of threads " + this.number_of_pooled_threads + ", will not reinitialise", LOG_TYPE.INFO, true);
+            } else {
+                thread_pool.shutdown();
+                while (!thread_pool.isShutdown()) {
+                }
+                if (user_list != null && user_list.size() > 0 && number_of_pooled_threads > user_list.size() && user_list.size() > this.number_of_pooled_threads) {
+                    number_of_pooled_threads_to_initialise = user_list.size();
+                    logMessage("Number to set pooled threads to is greater than the size of the user list, using user list size instead", LOG_TYPE.INFO, true);
+                } else {
+                    number_of_pooled_threads_to_initialise = number_of_pooled_threads;
+                }
+            }
+        }
+        if (initialise_thread_pool) {
+            this.number_of_pooled_threads = number_of_pooled_threads_to_initialise;
+            thread_pool = Executors.newFixedThreadPool(number_of_pooled_threads_to_initialise);
+            logMessage("Number of pooled threads successfully set to " + number_of_pooled_threads_to_initialise, LOG_TYPE.INFO, true);
+        }
     }
 
     /**
@@ -912,20 +943,13 @@ public class ProfileDeleter {
                 throw e;
             }
             user_list = Collections.synchronizedList(new_folders);
+            int number_of_pooled_threads_to_initialise;
             if (intended_number_of_pooled_threads > 0) {
-                if (intended_number_of_pooled_threads > user_list.size()) {
-                    number_of_pooled_threads = user_list.size();
-                } else {
-                    number_of_pooled_threads = intended_number_of_pooled_threads;
-                }
-                if (thread_pool != null) {
-                    thread_pool.shutdown();
-                    while (!thread_pool.isShutdown()) {
-                    }
-                    thread_pool = null;
-                }
-                thread_pool = Executors.newFixedThreadPool(number_of_pooled_threads);
+                number_of_pooled_threads_to_initialise = intended_number_of_pooled_threads;
+            } else {
+                number_of_pooled_threads_to_initialise = Integer.MAX_VALUE;
             }
+            setNumberOfPooledThreads(number_of_pooled_threads_to_initialise);
             logMessage("Completed deletions", LOG_TYPE.INFO, true);
             if (users_deleted.size() > 1) {
                 try {
@@ -1156,20 +1180,13 @@ public class ProfileDeleter {
                     }
                 }
                 power_shell_process.destroy();
+                int number_of_pooled_threads_to_initialise;
                 if (intended_number_of_pooled_threads > 0) {
-                    if (intended_number_of_pooled_threads > user_list.size()) {
-                        number_of_pooled_threads = user_list.size();
-                    } else {
-                        number_of_pooled_threads = intended_number_of_pooled_threads;
-                    }
-                    if (thread_pool != null) {
-                        thread_pool.shutdown();
-                        while (!thread_pool.isShutdown()) {
-                        }
-                        thread_pool = null;
-                    }
-                    thread_pool = Executors.newFixedThreadPool(number_of_pooled_threads);
+                    number_of_pooled_threads_to_initialise = intended_number_of_pooled_threads;
+                } else {
+                    number_of_pooled_threads_to_initialise = Integer.MAX_VALUE;
                 }
+                setNumberOfPooledThreads(number_of_pooled_threads_to_initialise);
                 logMessage("Successfully built users directory " + users_directory, LOG_TYPE.INFO, true);
             } catch (IOException e) {
                 logMessage("Failed to build users directory " + users_directory, LOG_TYPE.ERROR, true);

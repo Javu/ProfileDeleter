@@ -11,8 +11,6 @@ To do:
 * Try and make tooltips redraw if moving between two cells that show the same tooltip. Currently if two adjacent cells show the same tooltip the tip won't redraw. This is unintuitive and just looks like program lag.
 * Try and make registry functions also create a .reg backup file with REG EXPORT so ProfileList and ProfileGuid can be easily recovered in the case of a major error.
 * Remove the need to save REG QUERY results to file.
-* Add 'Total size selected for deletion' to program title when ever a user is selected or de-selected for deletion.
 
 Bugs:
 
-* Size field does not sort properly in both the main table and the deletion report
