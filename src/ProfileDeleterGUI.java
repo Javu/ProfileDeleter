@@ -120,6 +120,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     private JButton deletion_report_frame_copy_to_clipboard_button;
     private GridBagConstraints deletion_report_frame_copy_to_clipboard_button_gc;
     private JTable deletion_report_frame_table;
+    private deletionReportListener deletion_report_listener;
     private JScrollPane deletion_report_frame_scroll_pane;
     private GridBagConstraints deletion_report_frame_scroll_pane_gc;
 
@@ -530,6 +531,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         deletion_report_frame_copy_to_clipboard_button_gc.gridx = 1;
         deletion_report_frame_copy_to_clipboard_button_gc.gridy = 1;
         deletion_report_frame_table = new JTable();
+        deletion_report_listener = new deletionReportListener(deletion_report_frame_table);
         deletion_report_frame_scroll_pane = new JScrollPane(deletion_report_frame_table);
         deletion_report_frame_scroll_pane_gc = new GridBagConstraints();
         deletion_report_frame_scroll_pane_gc.fill = GridBagConstraints.BOTH;
@@ -1172,6 +1174,8 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                 }
             };
 
+            deletion_report_frame_table.getModel().removeTableModelListener(deletion_report_listener);
+            deletion_report_frame_table.getColumnModel().removeColumnModelListener(deletion_report_listener);
             deletion_report_frame_table.setModel(new DefaultTableModel(deletion_report_content, deletion_report_headings));
             deletion_report_frame_table.getColumnModel().getColumn(0).setCellRenderer(default_renderer);
             deletion_report_frame_table.getColumnModel().getColumn(0).setPreferredWidth(70);
@@ -1214,7 +1218,6 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             sort_keys.add(new RowSorter.SortKey(1, SortOrder.ASCENDING));
             sort_keys.add(new RowSorter.SortKey(0, SortOrder.ASCENDING));
             sorter.setSortKeys(sort_keys);
-            deletionReportListener deletion_report_listener = new deletionReportListener(deletion_report_frame_table);
             deletion_report_frame_table.getModel().addTableModelListener(deletion_report_listener);
             deletion_report_frame_table.getColumnModel().addColumnModelListener(deletion_report_listener);
             deletion_report_frame.setVisible(true);

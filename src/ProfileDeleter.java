@@ -1061,9 +1061,11 @@ public class ProfileDeleter {
             String filename_friendly_computer = remote_computer.replace('.', '_');
             try {
                 logMessage("Loading file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.txt", LOG_TYPE.INFO, true);
-                regkeys_profile_list = readFromFile(local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.txt");
+                //regkeys_profile_list = readFromFile(local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.txt");
+                regkeys_profile_list = registryQuery(remote_computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList");
                 logMessage("Loading file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.txt", LOG_TYPE.INFO, true);
-                regkeys_profile_guid = readFromFile(local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.txt");
+                //regkeys_profile_guid = readFromFile(local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.txt");
+                
                 if (regkeys_profile_list != null && !regkeys_profile_list.isEmpty() && regkeys_profile_guid != null && !regkeys_profile_guid.isEmpty()) {
                     String current_sid = "";
                     String profile_path = "";
@@ -1694,7 +1696,7 @@ public class ProfileDeleter {
     }
 
     /**
-     * Creates a registry backup using REG QUERY.
+     * Creates a registry backup to file using REG QUERY.
      *
      * @param computer the computer to create the backup on
      * @param reg_key the registry key to backup
@@ -1730,6 +1732,52 @@ public class ProfileDeleter {
             logMessage("Successfully saved registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name, LOG_TYPE.INFO, true);
         } catch (IOException | InterruptedException e) {
             logMessage("Could not save registry key " + reg_key + " on computer " + computer + " to folder " + full_file_name + ". Error is " + e.getMessage(), LOG_TYPE.ERROR, true);
+            throw e;
+        }
+    }
+
+    /**
+     * Creates a registry backup using REG QUERY and outputs it as a
+     * List<String>.
+     *
+     * @param computer the computer to create the backup on
+     * @param reg_key the registry key to backup
+     * @return
+     * @throws IOException an IO error occurred when backing up the registry or
+     * writing the file
+     * @throws CannotEditException unable to access the registry key or unable
+     * to create the backup file
+     * @throws InterruptedException the cmd process thread was interrupted
+     */
+    public List<String> registryQuery(String computer, String reg_key) throws IOException, CannotEditException, InterruptedException {
+        try {
+            logMessage("Attempting to get registry data " + reg_key + " on computer " + computer + " using REG QUERY", LOG_TYPE.INFO, true);
+            String line = "";
+            String error = "";
+            List<String> reg_query = new ArrayList<String>();
+            String command = "REG QUERY \"\\\\" + computer + "\\" + reg_key + "\" /s\"";
+            ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
+            builder.redirectErrorStream(true);
+            Process cmd_process = builder.start();
+            try (BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()))) {
+                while ((line = cmd_process_output_stream.readLine()) != null) {
+                    reg_query.add(line);
+                }
+            }
+            cmd_process.waitFor();
+            if (reg_query.isEmpty()) {
+                String message = "Nothing returned from REG QUERY";
+                logMessage(message, LOG_TYPE.ERROR, true);
+                throw new IOException(message);
+            } else if (reg_query.get(reg_query.size()-1).contains("ERROR")) {
+                String message = "Could not run REG QUERY for registry key " + reg_key + " on computer " + computer + ", error is: " + reg_query.get(reg_query.size()-1);
+                logMessage(message, LOG_TYPE.ERROR, true);
+                throw new CannotEditException(message);
+            }
+            logMessage("Successfully ran REG QUERY for registry key " + reg_key + " on computer " + computer, LOG_TYPE.INFO, true);
+            return reg_query;
+        } catch (IOException | InterruptedException e) {
+            logMessage("Could not run REG QUERY for registry key " + reg_key + " on computer " + computer + ". Error is " + e.getMessage(), LOG_TYPE.ERROR, true);
             throw e;
         }
     }
