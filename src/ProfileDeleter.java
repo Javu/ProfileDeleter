@@ -60,6 +60,7 @@ public class ProfileDeleter {
      * Class attributes.
      */
     private String remote_computer;
+    private String local_computer;
     private String users_directory;
     private String local_data_directory;
     private volatile List<UserData> user_list;
@@ -136,6 +137,7 @@ public class ProfileDeleter {
      */
     public ProfileDeleter(ActionListener log_updated) throws UnrecoverableException {
         remote_computer = "";
+        local_computer = "";
         users_directory = "";
         local_data_directory = "";
         user_list = Collections.synchronizedList(new ArrayList<UserData>());
@@ -1053,9 +1055,9 @@ public class ProfileDeleter {
      * @throws NotInitialisedException local data directory attribute has not
      * been initialised
      */
-    public void findSIDAndGUID() throws IOException, NotInitialisedException {
+    public void findSIDAndGUID() throws IOException, NotInitialisedException, CannotEditException, InterruptedException {
         logMessage("Attempting to compile SID and GUID data from registry backups", LOG_TYPE.INFO, true);
-        if (local_data_directory.compareTo("") != 0) {
+        //if (local_data_directory.compareTo("") != 0) {
             List<String> regkeys_profile_list;
             List<String> regkeys_profile_guid;
             String filename_friendly_computer = remote_computer.replace('.', '_');
@@ -1065,7 +1067,7 @@ public class ProfileDeleter {
                 regkeys_profile_list = registryQuery(remote_computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList");
                 logMessage("Loading file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.txt", LOG_TYPE.INFO, true);
                 //regkeys_profile_guid = readFromFile(local_data_directory + "\\" + filename_friendly_computer + "_ProfileGuid.txt");
-                
+                regkeys_profile_guid = registryQuery(remote_computer, "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileGuid");
                 if (regkeys_profile_list != null && !regkeys_profile_list.isEmpty() && regkeys_profile_guid != null && !regkeys_profile_guid.isEmpty()) {
                     String current_sid = "";
                     String profile_path = "";
@@ -1143,11 +1145,11 @@ public class ProfileDeleter {
                     logMessage(message, LOG_TYPE.ERROR, true);
                     throw new NotInitialisedException(message);
                 }
-            } catch (IOException e) {
+            } catch (IOException | InterruptedException | CannotEditException e) {
                 logMessage("Unable to read file " + local_data_directory + "\\" + filename_friendly_computer + "_ProfileList.txt. File may not exist. Error is " + e.getMessage(), LOG_TYPE.ERROR, true);
                 throw e;
             }
-        }
+        //}
     }
 
     /**
@@ -1289,20 +1291,20 @@ public class ProfileDeleter {
         logMessage("Getting registry SID and GUID values for user list", LOG_TYPE.INFO, true);
         generateSessionID();
         try {
-            generateLocalSessionFolder();
+            /*generateLocalSessionFolder();
             try {
                 backupAndCopyRegistry();
-                try {
-                    findSIDAndGUID();
+                try {*/
+                    findSIDAndGUID();/*
                 } catch (IOException | NotInitialisedException e) {
                     logMessage("Unable to process SID and GUID registry data, error is: " + e.getMessage(), LOG_TYPE.ERROR, true);
-                }
+                }*/
             } catch (IOException | CannotEditException | NotInitialisedException | InterruptedException e) {
                 logMessage("Unable to backup registry files, error is: " + e.getMessage(), LOG_TYPE.ERROR, true);
-            }
+            }/*
         } catch (IOException | CannotEditException | NotInitialisedException e) {
             logMessage("Unable to create session folders, error is: " + e.getMessage(), LOG_TYPE.ERROR, true);
-        }
+        }*/
     }
 
     /**
@@ -1475,6 +1477,42 @@ public class ProfileDeleter {
         }
     }
 
+    /**
+     * Finds the hostname of the local computer.
+     * 
+     * @throws InterruptedException if the cmd process used to find the hostname was interrupted before completion
+     * @throws IOException if unable to read from the cmd process
+     * @throws NotInitialisedException if the cmd process used to find the hostname failed to return a hostname
+     */
+    public void fineHostname() throws InterruptedException, IOException, NotInitialisedException {
+        try {
+            logMessage("Attempting to find hostname of this computer", LOG_TYPE.INFO, true);
+            String line = "";
+            String error = "";
+            String command = "hostname";
+            ProcessBuilder builder = new ProcessBuilder("C:\\Windows\\System32\\cmd.exe", "/c", command);
+            builder.redirectErrorStream(true);
+            Process cmd_process = builder.start();
+            try (BufferedReader cmd_process_output_stream = new BufferedReader(new InputStreamReader(cmd_process.getInputStream()))) {
+                while ((line = cmd_process_output_stream.readLine()) != null) {
+                    error = line;
+                }
+            }
+            cmd_process.waitFor();
+            if (error.compareTo("") == 0) {
+                String message = "Unable to get hostname";
+                logMessage(message, LOG_TYPE.ERROR, true);
+                throw new NotInitialisedException(message);
+            }
+            local_computer = error;
+            logMessage("Successfully found hostname of this computer: " + local_computer, LOG_TYPE.INFO, true);
+        } catch (IOException | InterruptedException e) {
+            logMessage("Failed to run CMD command to get hostname", LOG_TYPE.ERROR, true);
+            logMessage(e.getMessage(), LOG_TYPE.ERROR, true);
+            throw e;
+        }
+    }
+    
     /**
      * Creates a folder.
      * <p>
@@ -1749,7 +1787,7 @@ public class ProfileDeleter {
      * to create the backup file
      * @throws InterruptedException the cmd process thread was interrupted
      */
-    public List<String> registryQuery(String computer, String reg_key) throws IOException, CannotEditException, InterruptedException {
+    public List<String> registryQuery(String computer, String reg_key) throws IOException, CannotEditException, InterruptedException, NotInitialisedException {
         try {
             logMessage("Attempting to get registry data " + reg_key + " on computer " + computer + " using REG QUERY", LOG_TYPE.INFO, true);
             String line = "";
@@ -1766,9 +1804,9 @@ public class ProfileDeleter {
             }
             cmd_process.waitFor();
             if (reg_query.isEmpty()) {
-                String message = "Nothing returned from REG QUERY";
+                String message = "Nothing returned from REG QUERY for registry key " + reg_key + " on computer " + computer;
                 logMessage(message, LOG_TYPE.ERROR, true);
-                throw new IOException(message);
+                throw new NotInitialisedException(message);
             } else if (reg_query.get(reg_query.size()-1).contains("ERROR")) {
                 String message = "Could not run REG QUERY for registry key " + reg_key + " on computer " + computer + ", error is: " + reg_query.get(reg_query.size()-1);
                 logMessage(message, LOG_TYPE.ERROR, true);
