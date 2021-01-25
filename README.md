@@ -9,8 +9,8 @@ Should work on Windows 7 and higher versions.
 To do:
 
 * Try and make tooltips redraw if moving between two cells that show the same tooltip. Currently if two adjacent cells show the same tooltip the tip won't redraw. This is unintuitive and just looks like program lag.
-* Try and make registry functions also create a .reg backup file with REG EXPORT so ProfileList and ProfileGuid can be easily recovered in the case of a major error.
-* Remove the need to save REG QUERY results to file.
+* Add GUI popup that alerts user if state check and registry backup processes have failed most likely due to not enough disk space to load the users profile on the remote machine or to save the .reg backup files temporarily on the remote machine, possibly also give option to automatically delete some files on the remote computer from temp locations.
+* Make it rename the users folder first, then delete the registry keys, then delete the renamed user folder. This will ensure the user has no trouble logging in if something goes wrong or if the program is ended while a deletion is running.
 
 Bugs:
 

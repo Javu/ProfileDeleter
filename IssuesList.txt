@@ -1,1 +1,8 @@
 Cannot backup registry if there is absolutely no space left on the PC
+
+REG QUERY errors:
+ERROR: The System was unable to find the specified registry key or value.
+
+Ideas:
+Make it rename the users folder first, then delete the registry keys, then delete the renamed user folder.
+This will ensure the user has no trouble logging in if something goes wrong or if the program is ended while a deletion is running.

@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JEditorPane;
@@ -73,6 +74,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     boolean running_deletion;
     boolean computer_set;
     int number_of_users_selected_for_deletion;
+    AtomicInteger log_index;
 
     /**
      * Swing GUI elements.
@@ -166,6 +168,10 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         running_deletion = false;
         computer_set = false;
         number_of_users_selected_for_deletion = 0;
+        log_index = new AtomicInteger(profile_deleter.getLogList().size() - 1);
+        if (log_index.intValue() < 0) {
+            log_index.set(0);
+        }
 
         // Loads the GUI Configuration settings from the profiledeleter.config file.
         List<String> config = new ArrayList<>();
@@ -659,17 +665,13 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                     case 2:
                         class_name = "java.util.Date";
                         break;
-                    /*case 3:
-                        class_name = "java.lang.Integer";
-                        break;*/
                     default:
                         class_name = "java.lang.String";
                         break;
                 }
                 try {
                     return Class.forName(class_name);
-                } catch (ClassNotFoundException ex) {
-                    System.out.println("Couldn't find class " + class_name);
+                } catch (ClassNotFoundException e) {
                 }
                 return null;
             }
@@ -803,7 +805,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         sorter.setSortKeys(sort_keys);
         results_table.getModel().addTableModelListener(this);
     }
-    
+
     /**
      * Updates the data in the current table model for the results table.
      * <p>
@@ -838,10 +840,21 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
      */
     @Override
     public void actionPerformed(ActionEvent e) {
-        switch (e.getActionCommand()) {
+        String action_command = e.getActionCommand();
+        String sub_command = "";
+        if (action_command.contains("LogWritten")) {
+            sub_command = action_command.replace("LogWritten", "");
+            action_command = "LogWritten";
+        }
+        switch (action_command) {
             case "LogWritten":
-                if (system_console_text_area != null) {
-                    writeLogToSystemConsole();
+                int index_as_int = 0;
+                try {
+                    if (system_console_text_area != null) {
+                        index_as_int = Integer.parseInt(sub_command);
+                        writeLogToSystemConsole(index_as_int);
+                    }
+                } catch (NumberFormatException ex) {
                 }
                 setFormattedTitle();
                 break;
@@ -1020,7 +1033,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         deletion_report.add("test5\tYes\tYes\tYes\tYes\tS-1-1-3254\t{cjsufht}\t5,273 MB");
         deletion_report.add("test6\tNo\tYes\tThis is a test error: Failed to delete\tThis is a test error: This is longer than the SID error: Failed to delete\tS-1-1-3509\t{plkjhtr}\t102,789 MB");
         displayDeletionReport(deletion_report);
-        */
+         */
     }
 
     /**
@@ -1049,9 +1062,11 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
     /**
      * Appends log to system console when ProfileDeleter log is updated.
+     *
+     * @param index the index of the log list to write to system console
      */
-    private void writeLogToSystemConsole() {
-        system_console_text_area.append('\n' + profile_deleter.getLogList().get(profile_deleter.getLogList().size() - 1));
+    private synchronized void writeLogToSystemConsole(int index) {
+        system_console_text_area.append('\n' + profile_deleter.getLogList().get(index));
     }
 
     /**
