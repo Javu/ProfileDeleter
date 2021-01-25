@@ -5,6 +5,9 @@ import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
@@ -15,10 +18,12 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JDialog;
 import javax.swing.JEditorPane;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -26,13 +31,20 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
-import javax.swing.JWindow;
+import javax.swing.JTextPane;
+import javax.swing.RowSorter;
+import javax.swing.RowSorter.SortKey;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.SortOrder;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.ToolTipManager;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.TableColumnModelEvent;
+import javax.swing.event.TableColumnModelListener;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -40,6 +52,7 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableModel;
+import javax.swing.table.TableRowSorter;
 import javax.swing.text.html.HTMLEditorKit;
 
 /**
@@ -57,6 +70,11 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     String help_location;
     String help_text;
     Color uneditable_color;
+    String deletion_report_string;
+    boolean running_deletion;
+    boolean computer_set;
+    int number_of_users_selected_for_deletion;
+    AtomicInteger log_index;
 
     /**
      * Swing GUI elements.
@@ -96,6 +114,17 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     private JEditorPane help_frame_editor_pane;
     private JScrollPane help_frame_scroll_pane;
     private HTMLEditorKit help_frame_html_editor_kit;
+    private JFrame deletion_report_frame;
+    private JTextPane deletion_report_frame_heading_text_pane;
+    private GridBagConstraints deletion_report_frame_heading_text_pane_gc;
+    private JTextPane deletion_report_frame_computer_text_pane;
+    private GridBagConstraints deletion_report_frame_computer_text_pane_gc;
+    private JButton deletion_report_frame_copy_to_clipboard_button;
+    private GridBagConstraints deletion_report_frame_copy_to_clipboard_button_gc;
+    private JTable deletion_report_frame_table;
+    private deletionReportListener deletion_report_listener;
+    private JScrollPane deletion_report_frame_scroll_pane;
+    private GridBagConstraints deletion_report_frame_scroll_pane_gc;
 
     /**
      * SwingWorker threads for GUI.
@@ -135,7 +164,15 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         tooltip_dismiss_timer = 60000;
         help_location = "";
         uneditable_color = new Color(235, 235, 235);
-        
+        deletion_report_string = "";
+        running_deletion = false;
+        computer_set = false;
+        number_of_users_selected_for_deletion = 0;
+        log_index = new AtomicInteger(profile_deleter.getLogList().size() - 1);
+        if (log_index.intValue() < 0) {
+            log_index.set(0);
+        }
+
         // Loads the GUI Configuration settings from the profiledeleter.config file.
         List<String> config = new ArrayList<>();
         try {
@@ -152,9 +189,9 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                     try {
                         List<String> help_text_array = profile_deleter.readFromFile(help_location + "\\profile_deleter_help.html");
                         int count = 1;
-                        for(String help_text_line : help_text_array) {
+                        for (String help_text_line : help_text_array) {
                             help_text += help_text_line;
-                            if(count < help_text_array.size()) {
+                            if (count < help_text_array.size()) {
                                 help_text += '\n';
                             }
                             count++;
@@ -164,7 +201,8 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                     }
                 }
             }
-        } catch (IOException e) {}
+        } catch (IOException e) {
+        }
 
         // Configuration of tooltip settings
         ToolTipManager.sharedInstance().setEnabled(show_tooltips);
@@ -450,7 +488,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         help_frame_editor_pane.setContentType("text/html");
         try {
             File help_file = new File(help_location + "\\profile_deleter_help.html");
-            if(!help_file.exists()) {
+            if (!help_file.exists()) {
                 throw new IOException("Help file does not exist");
             }
             help_frame_editor_pane.setPage((new File(help_location + "\\profile_deleter_help.html").toURI().toURL()));
@@ -466,7 +504,57 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         help_frame.setMinimumSize(new Dimension(1200, 600));
         help_frame.pack();
         help_frame.setVisible(false);
-        
+
+        // Initialisation of deletion report display GUI element.
+        deletion_report_frame = new JFrame("Deletion Report");
+        deletion_report_frame.getContentPane().setLayout(new GridBagLayout());
+        deletion_report_frame_heading_text_pane = new JTextPane();
+        deletion_report_frame_heading_text_pane.setContentType("text/html");
+        deletion_report_frame_heading_text_pane.setText("<html><h2>Deletion Report</h2></html>");
+        deletion_report_frame_heading_text_pane.setEditable(false);
+        deletion_report_frame_heading_text_pane.setBorder(null);
+        deletion_report_frame_heading_text_pane.setBackground(Color.WHITE);
+        deletion_report_frame_heading_text_pane_gc = new GridBagConstraints();
+        deletion_report_frame_heading_text_pane_gc.fill = GridBagConstraints.BOTH;
+        deletion_report_frame_heading_text_pane_gc.gridwidth = GridBagConstraints.REMAINDER;
+        deletion_report_frame_heading_text_pane_gc.gridx = 0;
+        deletion_report_frame_heading_text_pane_gc.gridy = 0;
+        deletion_report_frame_computer_text_pane = new JTextPane();
+        deletion_report_frame_computer_text_pane.setContentType("text/html");
+        deletion_report_frame_computer_text_pane.setEditable(false);
+        deletion_report_frame_computer_text_pane.setBorder(null);
+        deletion_report_frame_computer_text_pane.setBackground(Color.WHITE);
+        deletion_report_frame_computer_text_pane_gc = new GridBagConstraints();
+        deletion_report_frame_computer_text_pane_gc.fill = GridBagConstraints.BOTH;
+        deletion_report_frame_computer_text_pane_gc.gridx = 0;
+        deletion_report_frame_computer_text_pane_gc.gridy = 1;
+        deletion_report_frame_computer_text_pane_gc.weightx = 1;
+        deletion_report_frame_copy_to_clipboard_button = new JButton("Copy Deletion Report to Clipboard");
+        deletion_report_frame_copy_to_clipboard_button.setActionCommand("CopyDeletionReport");
+        deletion_report_frame_copy_to_clipboard_button.addActionListener(this);
+        deletion_report_frame_copy_to_clipboard_button_gc = new GridBagConstraints();
+        deletion_report_frame_copy_to_clipboard_button_gc.fill = GridBagConstraints.BOTH;
+        deletion_report_frame_copy_to_clipboard_button_gc.gridx = 1;
+        deletion_report_frame_copy_to_clipboard_button_gc.gridy = 1;
+        deletion_report_frame_table = new JTable();
+        deletion_report_listener = new deletionReportListener(deletion_report_frame_table);
+        deletion_report_frame_scroll_pane = new JScrollPane(deletion_report_frame_table);
+        deletion_report_frame_scroll_pane_gc = new GridBagConstraints();
+        deletion_report_frame_scroll_pane_gc.fill = GridBagConstraints.BOTH;
+        deletion_report_frame_scroll_pane_gc.gridwidth = GridBagConstraints.REMAINDER;
+        deletion_report_frame_scroll_pane_gc.gridx = 0;
+        deletion_report_frame_scroll_pane_gc.gridy = 2;
+        deletion_report_frame_scroll_pane_gc.weightx = 1;
+        deletion_report_frame_scroll_pane_gc.weighty = 1;
+        deletion_report_frame.getContentPane().add(deletion_report_frame_heading_text_pane, deletion_report_frame_heading_text_pane_gc);
+        deletion_report_frame.getContentPane().add(deletion_report_frame_computer_text_pane, deletion_report_frame_computer_text_pane_gc);
+        deletion_report_frame.getContentPane().add(deletion_report_frame_copy_to_clipboard_button, deletion_report_frame_copy_to_clipboard_button_gc);
+        deletion_report_frame.getContentPane().add(deletion_report_frame_scroll_pane, deletion_report_frame_scroll_pane_gc);
+        deletion_report_frame.setDefaultCloseOperation(HIDE_ON_CLOSE);
+        deletion_report_frame.setMinimumSize(new Dimension(1200, 600));
+        deletion_report_frame.pack();
+        deletion_report_frame.setVisible(false);
+
         // Add all GUI elements to top level JFrame and display the GUI.
         getContentPane().add(computer_name_text_field, computer_name_text_field_gc);
         getContentPane().add(set_computer_button, set_computer_button_gc);
@@ -487,6 +575,51 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     }
 
     /**
+     * Changes the program title to include useful information on the status of
+     * the program.
+     */
+    private void setFormattedTitle() {
+        String title = "Profile Deleter";
+        if (profile_deleter != null && profile_deleter.getRemoteComputer() != null && !profile_deleter.getRemoteComputer().equals("")) {
+            title += " - " + profile_deleter.getRemoteComputer();
+            int number_of_users_deleted = 0;
+            if (profile_deleter.getSizeCheckComplete()) {
+                double total_size = 0.0;
+                double selected_size = 0.0;
+                for (UserData user : profile_deleter.getUserList()) {
+                    double size_as_double = 0.0;
+                    try {
+                        size_as_double += Double.parseDouble(user.getSize());
+                    } catch (NumberFormatException e) {
+                    }
+                    if (size_as_double > 0.0) {
+                        total_size += size_as_double;
+                        if (user.getDelete()) {
+                            selected_size += size_as_double;
+                        }
+                    }
+                }
+                title += " - Total Users Size: " + doubleToFormattedString(total_size / (1024.0 * 1024.0)) + " MB - Total size selected for deletion: " + doubleToFormattedString(selected_size / (1024.0 * 1024.0)) + " MB";
+            }
+            if (running_deletion) {
+                number_of_users_deleted = profile_deleter.getNumberOfUsersDeleted().get();
+                title += " - Users deleted: " + number_of_users_deleted + "/" + number_of_users_selected_for_deletion;
+            } else {
+                if (computer_set) {
+                    number_of_users_selected_for_deletion = 0;
+                    for (UserData user : profile_deleter.getUserList()) {
+                        if (user.getDelete()) {
+                            number_of_users_selected_for_deletion++;
+                        }
+                    }
+                    title += " - Users selected: " + number_of_users_selected_for_deletion;
+                }
+            }
+        }
+        setTitle(title);
+    }
+
+    /**
      * Converts a double value to a formatted String value.
      * <p>
      * The value passed is converted to a long value and has , added every 3rd
@@ -499,17 +632,17 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     private String doubleToFormattedString(Double format_value) {
         long double_to_long = Math.round(format_value);
         String double_to_long_string = Long.toString(double_to_long);
-        String foramatted_string = "";
+        String formatted_string = "";
         int count = 0;
         for (int i = double_to_long_string.length() - 1; i >= 0; i--) {
             if (count == 3) {
-                foramatted_string = "," + foramatted_string;
+                formatted_string = "," + formatted_string;
                 count = 0;
             }
-            foramatted_string = double_to_long_string.charAt(i) + foramatted_string;
+            formatted_string = double_to_long_string.charAt(i) + formatted_string;
             count++;
         }
-        return foramatted_string;
+        return formatted_string;
     }
 
     /**
@@ -532,17 +665,13 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
                     case 2:
                         class_name = "java.util.Date";
                         break;
-                    case 3:
-                        class_name = "java.lang.Integer";
-                        break;
                     default:
                         class_name = "java.lang.String";
                         break;
                 }
                 try {
                     return Class.forName(class_name);
-                } catch (ClassNotFoundException ex) {
-                    System.out.println("Couldn't find class " + class_name);
+                } catch (ClassNotFoundException e) {
                 }
                 return null;
             }
@@ -574,7 +703,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             public Component getTableCellRendererComponent(JTable table, Object value, boolean is_selected, boolean has_focus, int row, int column) {
                 //Component tableCellRendererComponent = super.getTableCellRendererComponent(table, value, is_selected, has_focus, row, column);
                 if (value instanceof Boolean) {
-                    checkbox.setSelected((Boolean)value);
+                    checkbox.setSelected((Boolean) value);
                 }
                 if ((table.getModel().getValueAt(table.convertRowIndexToModel(row), 4)).toString().equals("Uneditable")) {
                     checkbox.setBackground(uneditable_color);
@@ -611,7 +740,11 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             public void setValue(Object value) {
                 String output = "";
                 if (value != null && !value.toString().isEmpty()) {
-                    output = doubleToFormattedString(Double.parseDouble(value.toString()) / (1024.0 * 1024.0)) + " MB";
+                    try {
+                        output = doubleToFormattedString(Double.parseDouble(value.toString()) / (1024.0 * 1024.0)) + " MB";
+                    } catch (NumberFormatException e) {
+                        output = value.toString();
+                    }
                 }
                 setText(output);
             }
@@ -635,7 +768,41 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         results_table.getColumnModel().getColumn(4).setCellRenderer(default_renderer);
         results_table.getColumnModel().getColumn(5).setCellRenderer(default_renderer);
         results_table.getColumnModel().getColumn(6).setCellRenderer(default_renderer);
-        results_table.setAutoCreateRowSorter(true);
+        results_table.getColumnModel().getColumn(0).setPreferredWidth(30);
+        results_table.getColumnModel().getColumn(0).setMinWidth(1);
+        results_table.getColumnModel().getColumn(0).setMaxWidth(Short.MAX_VALUE);
+        results_table.getColumnModel().getColumn(1).setCellRenderer(default_renderer);
+        results_table.getColumnModel().getColumn(1).setPreferredWidth(100);
+        results_table.getColumnModel().getColumn(1).setMinWidth(1);
+        results_table.getColumnModel().getColumn(1).setMaxWidth(Short.MAX_VALUE);
+        results_table.getColumnModel().getColumn(2).setCellRenderer(date_renderer);
+        results_table.getColumnModel().getColumn(2).setPreferredWidth(100);
+        results_table.getColumnModel().getColumn(2).setMinWidth(1);
+        results_table.getColumnModel().getColumn(2).setMaxWidth(Short.MAX_VALUE);
+        results_table.getColumnModel().getColumn(3).setCellRenderer(size_renderer);
+        results_table.getColumnModel().getColumn(3).setPreferredWidth(50);
+        results_table.getColumnModel().getColumn(3).setMinWidth(1);
+        results_table.getColumnModel().getColumn(3).setMaxWidth(Short.MAX_VALUE);
+        results_table.getColumnModel().getColumn(4).setCellRenderer(default_renderer);
+        results_table.getColumnModel().getColumn(4).setPreferredWidth(50);
+        results_table.getColumnModel().getColumn(4).setMinWidth(1);
+        results_table.getColumnModel().getColumn(4).setMaxWidth(Short.MAX_VALUE);
+        results_table.getColumnModel().getColumn(5).setCellRenderer(default_renderer);
+        results_table.getColumnModel().getColumn(5).setPreferredWidth(280);
+        results_table.getColumnModel().getColumn(5).setMinWidth(1);
+        results_table.getColumnModel().getColumn(5).setMaxWidth(Short.MAX_VALUE);
+        results_table.getColumnModel().getColumn(6).setCellRenderer(default_renderer);
+        results_table.getColumnModel().getColumn(6).setPreferredWidth(230);
+        results_table.getColumnModel().getColumn(6).setMinWidth(1);
+        results_table.getColumnModel().getColumn(6).setMaxWidth(Short.MAX_VALUE);
+        results_table.setAutoCreateRowSorter(false);
+        tableRowSorterWithPreferredColumn sorter = new tableRowSorterWithPreferredColumn(new ArrayList<Integer>(Arrays.asList(1)), SortOrder.ASCENDING, results_table.getModel());
+        formattedSizeComparator size_comparator = new formattedSizeComparator();
+        results_table.setRowSorter(sorter);
+        sorter.setComparator(3, size_comparator);
+        List<RowSorter.SortKey> sort_keys = new ArrayList<RowSorter.SortKey>();
+        sort_keys.add(new RowSorter.SortKey(1, SortOrder.ASCENDING));
+        sorter.setSortKeys(sort_keys);
         results_table.getModel().addTableModelListener(this);
     }
 
@@ -673,11 +840,23 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
      */
     @Override
     public void actionPerformed(ActionEvent e) {
-        switch (e.getActionCommand()) {
+        String action_command = e.getActionCommand();
+        String sub_command = "";
+        if (action_command.contains("LogWritten")) {
+            sub_command = action_command.replace("LogWritten", "");
+            action_command = "LogWritten";
+        }
+        switch (action_command) {
             case "LogWritten":
-                if (system_console_text_area != null) {
-                    writeLogToSystemConsole();
+                int index_as_int = 0;
+                try {
+                    if (system_console_text_area != null) {
+                        index_as_int = Integer.parseInt(sub_command);
+                        writeLogToSystemConsole(index_as_int);
+                    }
+                } catch (NumberFormatException ex) {
                 }
+                setFormattedTitle();
                 break;
             case "SetComputer":
                 setComputerButton();
@@ -713,6 +892,9 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             case "Exit":
                 exitButton();
                 break;
+            case "CopyDeletionReport":
+                copyDeletionReportToClipboardButton();
+                break;
         }
     }
 
@@ -731,7 +913,6 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         rerun_checks_button.setEnabled(false);
         delete_all_users_checkbox.setEnabled(false);
         run_deletion_button.setEnabled(false);
-        write_log_button.setEnabled(false);
         results_table.setEnabled(false);
         (set_computer_thread = new setComputerThread()).execute();
     }
@@ -751,7 +932,6 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         rerun_checks_button.setEnabled(false);
         delete_all_users_checkbox.setEnabled(false);
         run_deletion_button.setEnabled(false);
-        write_log_button.setEnabled(false);
         results_table.setEnabled(false);
         (rerun_checks_thread = new rerunChecksThread()).execute();
     }
@@ -771,7 +951,6 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         rerun_checks_button.setEnabled(false);
         delete_all_users_checkbox.setEnabled(false);
         run_deletion_button.setEnabled(false);
-        write_log_button.setEnabled(false);
         results_table.setEnabled(false);
         (run_deletion_thread = new runDeletionThread()).execute();
     }
@@ -783,16 +962,16 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
      * SwingWorker thread.
      */
     private void writeLogButton() {
-        computer_name_text_field.setEnabled(false);
+        /*computer_name_text_field.setEnabled(false);
         set_computer_button.setEnabled(false);
         size_check_checkbox.setEnabled(false);
         state_check_checkbox.setEnabled(false);
         registry_check_checkbox.setEnabled(false);
         rerun_checks_button.setEnabled(false);
         delete_all_users_checkbox.setEnabled(false);
-        run_deletion_button.setEnabled(false);
-        write_log_button.setEnabled(false);
-        results_table.setEnabled(false);
+        run_deletion_button.setEnabled(false);*/
+        write_log_button.setEnabled(false);/*
+        results_table.setEnabled(false);*/
         (write_log_thread = new writeLogThread()).execute();
     }
 
@@ -832,6 +1011,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     private void deleteAllUsersCheckbox() {
         profile_deleter.setDeleteAllUsers(delete_all_users_checkbox.isSelected());
         updateTableData();
+        setFormattedTitle();
     }
 
     /**
@@ -841,6 +1021,19 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
      */
     private void helpButton() {
         help_frame.setVisible(!help_frame.isVisible());
+        /*
+        profile_deleter.setRemoteComputer("CITSZTESTPC0001");
+        List<String> deletion_report = new ArrayList<>();
+        deletion_report.add("Deletion Report");
+        deletion_report.add("User\tSuccessful?\tFolder Deleted?\tSID Deleted?\tGUID Deleted?\tSID\tGUID\tSize");
+        deletion_report.add("test1\tYes\tYes\tYes\tYes\tS-1-5-21-2674729722-3223790836-806692015-29759\t{61fbd68c-ec4e-46fa-8542-469461e6f14a}\t1,089 MB");
+        deletion_report.add("test2\tNo\tThis is a really long test error. Could not delete folder. User is logged in so cannot delete\tYes\tYes\tS-1-1-7654\t{3a9cdc08-03b9-46ec-b61a-11384363abb3}\t53,827 MB");
+        deletion_report.add("test3\tYes\tYes\tYes\tYes\tS-1-1-4321\t{mcgsjry}\t2,736,253 MB");
+        deletion_report.add("test4\tYes\tYes\tSID is blank\tGUID is blank\t\t\t12,280,089 MB");
+        deletion_report.add("test5\tYes\tYes\tYes\tYes\tS-1-1-3254\t{cjsufht}\t5,273 MB");
+        deletion_report.add("test6\tNo\tYes\tThis is a test error: Failed to delete\tThis is a test error: This is longer than the SID error: Failed to delete\tS-1-1-3509\t{plkjhtr}\t102,789 MB");
+        displayDeletionReport(deletion_report);
+         */
     }
 
     /**
@@ -853,10 +1046,197 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
     }
 
     /**
-     * Appends log to system console when ProfileDeleter log is updated.
+     * Run when the copy deletion report to clipboard button is pressed on the
+     * deletion report JFrame.
+     * <p>
+     * Copies the deletion report to the clipboard
      */
-    private void writeLogToSystemConsole() {
-        system_console_text_area.append('\n' + profile_deleter.getLogList().get(profile_deleter.getLogList().size() - 1));
+    private void copyDeletionReportToClipboardButton() {
+        if (deletion_report_string != null && !deletion_report_string.isEmpty()) {
+            StringSelection selection = new StringSelection(deletion_report_string);
+            Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+            clipboard.setContents(selection, selection);
+            profile_deleter.logMessage("Copied deletion report to clipboard", ProfileDeleter.LOG_TYPE.INFO, true);
+        }
+    }
+
+    /**
+     * Appends log to system console when ProfileDeleter log is updated.
+     *
+     * @param index the index of the log list to write to system console
+     */
+    private synchronized void writeLogToSystemConsole(int index) {
+        system_console_text_area.append('\n' + profile_deleter.getLogList().get(index));
+    }
+
+    /**
+     * Displays the deletion report from ProfileDeleter process deletion
+     * function on a new JFrame using a JTable to display the data.
+     *
+     * @param deletion_report the deletion report returned from ProfileDeleter
+     * after a deletion is processed
+     */
+    private void displayDeletionReport(List<String> deletion_report) {
+        if (deletion_report.size() > 2) {
+            String deletion_report_header_as_string = "";
+            String deletion_report_headings_as_string = "";
+            String deletion_report_content_as_string = "";
+            Double total_size = 0.0;
+            deletion_report_frame.setTitle("Deletion Report - " + profile_deleter.getRemoteComputer());
+            String[] deletion_report_headings = new String[deletion_report.get(1).split("\t").length];
+            Object[][] deletion_report_content = new Object[deletion_report.size() - 2][];
+            for (int i = 0; i < deletion_report.size(); i++) {
+                if (i > 0) {
+                    if (i == 1) {
+                        deletion_report_headings = deletion_report.get(i).split("\t");
+                        deletion_report_headings_as_string += deletion_report.get(i);
+                    } else {
+                        deletion_report_content[i - 2] = deletion_report.get(i).split("\t");
+                        String size_formatted = "";
+                        if (deletion_report_content[i - 2][7] != null && !deletion_report_content[i - 2][7].toString().isEmpty()) {
+                            try {
+                                total_size += Double.parseDouble(deletion_report_content[i - 2][7].toString());
+                                size_formatted = doubleToFormattedString(Double.parseDouble(deletion_report_content[i - 2][7].toString()) / (1024 * 1024)) + " MB";
+                            } catch (NumberFormatException e) {
+                                size_formatted = deletion_report_content[i - 2][7].toString();
+                            }
+                        }
+                        deletion_report_content_as_string += deletion_report_content[i - 2][0].toString() + '\t' + deletion_report_content[i - 2][1].toString() + '\t' + deletion_report_content[i - 2][2].toString() + '\t' + deletion_report_content[i - 2][3].toString() + '\t' + deletion_report_content[i - 2][4].toString() + '\t' + deletion_report_content[i - 2][5].toString() + '\t' + deletion_report_content[i - 2][6].toString() + '\t' + size_formatted;
+                        if (i != deletion_report.size() - 1) {
+                            deletion_report_content_as_string += '\n';
+                        }
+                    }
+                } else {
+                    deletion_report_header_as_string += deletion_report.get(i) + '\n';
+                }
+            }
+            String total_size_formatted = "";
+            if (total_size > 0.0) {
+                total_size_formatted = doubleToFormattedString(total_size / (1024 * 1024)) + " MB";
+            } else {
+                total_size_formatted = "Not calculated";
+            }
+            deletion_report_frame_computer_text_pane.setText("<html><strong>Computer:</strong> " + profile_deleter.getRemoteComputer() + "<br>" + "<strong>Total Size Deleted:</strong> " + total_size_formatted + "</html>");
+            deletion_report_header_as_string += "Computer:" + '\t' + profile_deleter.getRemoteComputer() + '\n';
+            deletion_report_header_as_string += "Total Size Deleted:" + '\t' + total_size_formatted + '\n';
+            deletion_report_string = deletion_report_header_as_string + deletion_report_headings_as_string + '\n' + deletion_report_content_as_string;
+
+            // Default renderer for table columns.
+            TableCellRenderer default_renderer = new DefaultTableCellRenderer() {
+
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value, boolean is_selected, boolean has_focus, int row, int column) {
+                    Component tableCellRendererComponent = super.getTableCellRendererComponent(table, value, is_selected, has_focus, row, column);
+                    ((DefaultTableCellRenderer) tableCellRendererComponent).setHorizontalAlignment(DefaultTableCellRenderer.LEFT);
+                    ((DefaultTableCellRenderer) tableCellRendererComponent).setVerticalAlignment(DefaultTableCellRenderer.TOP);
+                    if (!(table.getModel().getValueAt(table.convertRowIndexToModel(row), 1)).toString().equals("Yes")) {
+                        tableCellRendererComponent.setForeground(Color.WHITE);
+                        tableCellRendererComponent.setBackground(Color.DARK_GRAY);
+                    } else {
+                        tableCellRendererComponent.setForeground(Color.BLACK);
+                        tableCellRendererComponent.setBackground(Color.WHITE);
+                    }
+                    return tableCellRendererComponent;
+                }
+            };
+            // Determines how the Successfully Deleted? column shoud be displayed.
+            TableCellRenderer deletion_successful_renderer = new DefaultTableCellRenderer() {
+
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value, boolean is_selected, boolean has_focus, int row, int column) {
+                    Component tableCellRendererComponent = super.getTableCellRendererComponent(table, value, is_selected, has_focus, row, column);
+                    ((DefaultTableCellRenderer) tableCellRendererComponent).setHorizontalAlignment(DefaultTableCellRenderer.LEFT);
+                    ((DefaultTableCellRenderer) tableCellRendererComponent).setVerticalAlignment(DefaultTableCellRenderer.TOP);
+                    if (!(table.getModel().getValueAt(table.convertRowIndexToModel(row), 1)).toString().equals("Yes")) {
+                        tableCellRendererComponent.setForeground(Color.WHITE);
+                        tableCellRendererComponent.setBackground(Color.DARK_GRAY);
+                    } else {
+                        tableCellRendererComponent.setForeground(Color.BLACK);
+                        tableCellRendererComponent.setBackground(uneditable_color);
+                    }
+                    return tableCellRendererComponent;
+                }
+            };
+            // Determines how the Size column shoud be displayed.
+            TableCellRenderer size_renderer = new DefaultTableCellRenderer() {
+
+                @Override
+                public void setValue(Object value) {
+                    String output = "";
+                    if (value != null && !value.toString().isEmpty()) {
+                        try {
+                            output = doubleToFormattedString(Double.parseDouble(value.toString()) / (1024.0 * 1024.0)) + " MB";
+                        } catch (NumberFormatException e) {
+                            output = value.toString();
+                        }
+                    }
+                    setText(output);
+                }
+
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value, boolean is_selected, boolean has_focus, int row, int column) {
+                    Component tableCellRendererComponent = super.getTableCellRendererComponent(table, value, is_selected, has_focus, row, column);
+                    if (!(table.getModel().getValueAt(table.convertRowIndexToModel(row), 1)).toString().equals("Yes")) {
+                        tableCellRendererComponent.setForeground(Color.WHITE);
+                        tableCellRendererComponent.setBackground(Color.DARK_GRAY);
+                    } else {
+                        tableCellRendererComponent.setForeground(Color.BLACK);
+                        tableCellRendererComponent.setBackground(Color.WHITE);
+                    }
+                    ((DefaultTableCellRenderer) tableCellRendererComponent).setHorizontalAlignment(DefaultTableCellRenderer.RIGHT);
+                    ((DefaultTableCellRenderer) tableCellRendererComponent).setVerticalAlignment(DefaultTableCellRenderer.TOP);
+                    return tableCellRendererComponent;
+                }
+            };
+
+            deletion_report_frame_table.getModel().removeTableModelListener(deletion_report_listener);
+            deletion_report_frame_table.getColumnModel().removeColumnModelListener(deletion_report_listener);
+            deletion_report_frame_table.setModel(new DefaultTableModel(deletion_report_content, deletion_report_headings));
+            deletion_report_frame_table.getColumnModel().getColumn(0).setCellRenderer(default_renderer);
+            deletion_report_frame_table.getColumnModel().getColumn(0).setPreferredWidth(70);
+            deletion_report_frame_table.getColumnModel().getColumn(0).setMinWidth(1);
+            deletion_report_frame_table.getColumnModel().getColumn(0).setMaxWidth(Short.MAX_VALUE);
+            deletion_report_frame_table.getColumnModel().getColumn(1).setCellRenderer(deletion_successful_renderer);
+            deletion_report_frame_table.getColumnModel().getColumn(1).setPreferredWidth(60);
+            deletion_report_frame_table.getColumnModel().getColumn(1).setMinWidth(1);
+            deletion_report_frame_table.getColumnModel().getColumn(1).setMaxWidth(Short.MAX_VALUE);
+            deletion_report_frame_table.getColumnModel().getColumn(2).setCellRenderer(new possibleErrorRenderer());
+            deletion_report_frame_table.getColumnModel().getColumn(2).setPreferredWidth(70);
+            deletion_report_frame_table.getColumnModel().getColumn(2).setMinWidth(1);
+            deletion_report_frame_table.getColumnModel().getColumn(2).setMaxWidth(Short.MAX_VALUE);
+            deletion_report_frame_table.getColumnModel().getColumn(3).setCellRenderer(new possibleErrorRenderer());
+            deletion_report_frame_table.getColumnModel().getColumn(3).setPreferredWidth(50);
+            deletion_report_frame_table.getColumnModel().getColumn(3).setMinWidth(1);
+            deletion_report_frame_table.getColumnModel().getColumn(3).setMaxWidth(Short.MAX_VALUE);
+            deletion_report_frame_table.getColumnModel().getColumn(4).setCellRenderer(new possibleErrorRenderer());
+            deletion_report_frame_table.getColumnModel().getColumn(4).setPreferredWidth(60);
+            deletion_report_frame_table.getColumnModel().getColumn(4).setMinWidth(1);
+            deletion_report_frame_table.getColumnModel().getColumn(4).setMaxWidth(Short.MAX_VALUE);
+            deletion_report_frame_table.getColumnModel().getColumn(5).setCellRenderer(default_renderer);
+            deletion_report_frame_table.getColumnModel().getColumn(5).setPreferredWidth(275);
+            deletion_report_frame_table.getColumnModel().getColumn(5).setMinWidth(1);
+            deletion_report_frame_table.getColumnModel().getColumn(5).setMaxWidth(Short.MAX_VALUE);
+            deletion_report_frame_table.getColumnModel().getColumn(6).setCellRenderer(default_renderer);
+            deletion_report_frame_table.getColumnModel().getColumn(6).setPreferredWidth(215);
+            deletion_report_frame_table.getColumnModel().getColumn(6).setMinWidth(1);
+            deletion_report_frame_table.getColumnModel().getColumn(6).setMaxWidth(Short.MAX_VALUE);
+            deletion_report_frame_table.getColumnModel().getColumn(7).setCellRenderer(size_renderer);
+            deletion_report_frame_table.getColumnModel().getColumn(7).setPreferredWidth(50);
+            deletion_report_frame_table.getColumnModel().getColumn(7).setMinWidth(1);
+            deletion_report_frame_table.getColumnModel().getColumn(7).setMaxWidth(Short.MAX_VALUE);
+            deletion_report_frame_table.setAutoCreateRowSorter(false);
+            tableRowSorterWithPreferredColumn sorter = new tableRowSorterWithPreferredColumn(new ArrayList<Integer>(Arrays.asList(1, 0)), SortOrder.ASCENDING, deletion_report_frame_table.getModel());
+            formattedSizeComparator size_comparator = new formattedSizeComparator();
+            deletion_report_frame_table.setRowSorter(sorter);
+            sorter.setComparator(7, size_comparator);
+            List<RowSorter.SortKey> sort_keys = new ArrayList<RowSorter.SortKey>();
+            sort_keys.add(new RowSorter.SortKey(1, SortOrder.ASCENDING));
+            sort_keys.add(new RowSorter.SortKey(0, SortOrder.ASCENDING));
+            sorter.setSortKeys(sort_keys);
+            deletion_report_frame_table.getModel().addTableModelListener(deletion_report_listener);
+            deletion_report_frame_table.getColumnModel().addColumnModelListener(deletion_report_listener);
+            deletion_report_frame.setVisible(true);
+        }
     }
 
     /**
@@ -872,9 +1252,236 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         int column = e.getColumn();
         TableModel model = (TableModel) e.getSource();
         Object data = model.getValueAt(row, column);
-        
-        if(column == 0) {
+
+        if (column == 0) {
             profile_deleter.getUserList().get(row).setDelete(Boolean.parseBoolean(data.toString()));
+            setFormattedTitle();
+        }
+    }
+
+    /**
+     * Strips all non-numeric characters except the first period as long as it
+     * is not at the end of the String from each String, then compares the
+     * double values returned. If the string has no numeric characters it is
+     * counted as double value -Double.MAX_VALUE.
+     */
+    private class formattedSizeComparator implements Comparator<String> {
+
+        @Override
+        public int compare(String o1, String o2) {
+            int strings_compared = 0;
+            String o1_stripped = o1.replaceAll("([^0-9.])|(\\.$)", "");
+            String o2_stripped = o2.replaceAll("([^0-9.])|(\\.$)", "");
+            if (o1_stripped.isEmpty()) {
+                o1_stripped = Double.toString(-Double.MAX_VALUE);
+            } else {
+                String[] o1_split = o1_stripped.split("\\.");
+                if (o1_split.length > 1) {
+                    boolean first_period = false;
+                    String o1_cleaned = "";
+                    for (String characters : o1_split) {
+                        if (!first_period) {
+                            o1_cleaned += characters + ".";
+                            first_period = true;
+                        } else {
+                            o1_cleaned += characters;
+                        }
+                    }
+                    o1_stripped = o1_cleaned;
+                }
+            }
+            if (o2_stripped.isEmpty()) {
+                o2_stripped = Double.toString(-Double.MAX_VALUE);
+            } else {
+                String[] o2_split = o2_stripped.split("\\.");
+                if (o2_split.length > 1) {
+                    boolean first_period = false;
+                    String o2_cleaned = "";
+                    for (String characters : o2_split) {
+                        if (!first_period) {
+                            o2_cleaned += characters + ".";
+                            first_period = true;
+                        } else {
+                            o2_cleaned += characters;
+                        }
+                    }
+                    o2_stripped = o2_cleaned;
+                }
+            }
+            Double o1_converted;
+            Double o2_converted;
+            try {
+                o1_converted = Double.parseDouble(o1_stripped);
+            } catch (NumberFormatException e) {
+                o1_converted = -Double.MAX_VALUE;
+            }
+            try {
+                o2_converted = Double.parseDouble(o2_stripped);
+            } catch (NumberFormatException e) {
+                o2_converted = -Double.MAX_VALUE;
+            }
+            strings_compared = Double.compare(o1_converted, o2_converted);
+            return strings_compared;
+        }
+
+    }
+
+    /**
+     * TableRowSorter that allows you to set a hierarchy of columns to sort by.
+     * Can be passed an array of Integers that correspond to the hierarchy of
+     * sort preferences. If the column being sorted by is not in the array then
+     * any rows with matching values will be sorted based on the array.
+     *
+     * @param <M> TableModel of the table this sorter is assigned to.
+     */
+    private class tableRowSorterWithPreferredColumn<M extends TableModel> extends TableRowSorter<M> {
+
+        List<Integer> column_preferences;
+        SortOrder preferred_sort_order;
+        boolean first_sort;
+        int last_column_sorted;
+
+        public tableRowSorterWithPreferredColumn(M model) {
+            column_preferences = new ArrayList<>(Arrays.asList(0));
+            preferred_sort_order = SortOrder.ASCENDING;
+            first_sort = true;
+            last_column_sorted = -1;
+            setModel(model);
+        }
+
+        public tableRowSorterWithPreferredColumn(List<Integer> column_preferences, SortOrder preferred_sort_order, M model) {
+            this.column_preferences = column_preferences;
+            this.preferred_sort_order = preferred_sort_order;
+            first_sort = true;
+            last_column_sorted = -1;
+            setModel(model);
+        }
+
+        @Override
+        public void toggleSortOrder(int column) {
+            List<? extends SortKey> sort_keys = getSortKeys();
+            if (sort_keys.size() == 0) {
+                generateSortKeys(column, SortOrder.ASCENDING);
+                return;
+            }
+
+            if (sort_keys.size() > 0 && last_column_sorted == column || first_sort) {
+                if (first_sort) {
+                    first_sort = false;
+                    last_column_sorted = column;
+                    if (column != sort_keys.get(0).getColumn()) {
+                        generateSortKeys(column, SortOrder.ASCENDING);
+                        return;
+                    }
+                }
+                List<SortKey> new_keys = new ArrayList<SortKey>(getSortKeys());
+                SortOrder new_sort_order;
+                if (new_keys.get(0).getSortOrder() == SortOrder.ASCENDING) {
+                    new_sort_order = SortOrder.DESCENDING;
+                } else {
+                    new_sort_order = SortOrder.ASCENDING;
+                }
+                generateSortKeys(column, new_sort_order);
+                return;
+            } else if (sort_keys.size() > 0 && last_column_sorted != column && !first_sort) {
+                generateSortKeys(column, SortOrder.ASCENDING);
+                last_column_sorted = column;
+                return;
+            }
+            super.toggleSortOrder(column);
+        }
+
+        private void generateSortKeys(int first_column, SortOrder first_column_sort_order) {
+            List<SortKey> new_keys = new ArrayList<SortKey>();
+            new_keys.add(new SortKey(first_column, first_column_sort_order));
+            for (int preferred_column : column_preferences) {
+                if (first_column != preferred_column) {
+                    new_keys.add(new SortKey(preferred_column, preferred_sort_order));
+                }
+            }
+            setSortKeys(new_keys);
+        }
+    }
+
+    /**
+     * TableCellrenderer that allows text wrapping for large strings of text.
+     * Used for fields in the deletion report that can contain error messages.
+     */
+    private class possibleErrorRenderer extends JTextArea implements TableCellRenderer {
+
+        possibleErrorRenderer() {
+            setLineWrap(true);
+            setWrapStyleWord(true);
+        }
+
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean is_selected, boolean has_focus, int row, int column) {
+            setText(value.toString());
+            setSize(table.getColumnModel().getColumn(column).getWidth(), Short.MAX_VALUE);
+            if (!(table.getModel().getValueAt(table.convertRowIndexToModel(row), 1)).toString().equals("Yes")) {
+                this.setForeground(Color.WHITE);
+                this.setBackground(Color.DARK_GRAY);
+            } else {
+                this.setForeground(Color.BLACK);
+                this.setBackground(Color.WHITE);
+            }
+            return this;
+        }
+    };
+
+    /**
+     * Listener to track changes in the deletion report JTable. This is used
+     * specifically to dynamically adjust row height for each row as the table
+     * view is changed.
+     */
+    private class deletionReportListener implements TableModelListener, TableColumnModelListener {
+
+        JTable table;
+
+        deletionReportListener(JTable table) {
+            this.table = table;
+        }
+
+        @Override
+        public void tableChanged(TableModelEvent e) {
+            updateRowHeights();
+        }
+
+        @Override
+        public void columnMarginChanged(ChangeEvent e) {
+            updateRowHeights();
+        }
+
+        private void updateRowHeights() {
+            for (int i = 0; i < table.getRowCount(); i++) {
+                int row_height = 0;
+                for (int j = 0; j < table.getColumnCount(); j++) {
+                    int current_cell_height = table.getCellRenderer(i, j).getTableCellRendererComponent(table, table.getValueAt(i, j), false, false, i, j).getPreferredSize().height;
+                    if (current_cell_height > row_height) {
+                        row_height = current_cell_height;
+                    }
+                }
+                table.setRowHeight(i, row_height);
+            }
+        }
+
+        @Override
+        public void columnAdded(TableColumnModelEvent e) {
+            updateRowHeights();
+        }
+
+        @Override
+        public void columnRemoved(TableColumnModelEvent e) {
+            updateRowHeights();
+        }
+
+        @Override
+        public void columnMoved(TableColumnModelEvent e) {
+            updateRowHeights();
+        }
+
+        @Override
+        public void columnSelectionChanged(ListSelectionEvent e) {
+            updateRowHeights();
         }
     }
 
@@ -889,21 +1496,14 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         protected Object doInBackground() throws Exception {
             ping_success = profile_deleter.pingPC(computer_name_text_field.getText());
             if (ping_success) {
+                computer_set = false;
                 profile_deleter.setSizeCheckComplete(false);
                 profile_deleter.setStateCheckComplete(false);
                 profile_deleter.setRegistryCheckComplete(false);
                 profile_deleter.setRemoteComputer(computer_name_text_field.getText());
                 profile_deleter.generateUserList();
                 profile_deleter.checkAll();
-                if (profile_deleter.getSizeCheckComplete()) {
-                    double total_size = 0.0;
-                    for (UserData user : profile_deleter.getUserList()) {
-                        total_size += Double.parseDouble(user.getSize());
-                    }
-                    setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer() + " - Total Users Size: " + doubleToFormattedString(total_size / (1024.0 * 1024.0)) + " MB");
-                } else {
-                    setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer());
-                }
+                computer_set = true;
             } else {
                 profile_deleter.logMessage("Unable to ping computer, computer not set", ProfileDeleter.LOG_TYPE.WARNING, true);
             }
@@ -927,6 +1527,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             delete_all_users_checkbox.setEnabled(true);
             write_log_button.setEnabled(true);
             results_table.setEnabled(true);
+            setFormattedTitle();
         }
     }
 
@@ -939,13 +1540,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         protected Object doInBackground() throws Exception {
             if (profile_deleter.getRemoteComputer() != null && !profile_deleter.getRemoteComputer().isEmpty()) {
                 profile_deleter.checkAll();
-                if (profile_deleter.getSizeCheckComplete()) {
-                    double total_size = 0.0;
-                    for (UserData user : profile_deleter.getUserList()) {
-                        total_size += Double.parseDouble(user.getSize());
-                    }
-                    setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer() + " - Total Users Size: " + doubleToFormattedString(total_size / (1024.0 * 1024.0)) + " MB");
-                }
+                setFormattedTitle();
             }
             return new Object();
         }
@@ -984,7 +1579,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
         }
 
         @Override
-        public void done() {
+        public void done() {/*
             if (profile_deleter.getStateCheckComplete() && profile_deleter.getRegistryCheckComplete()) {
                 run_deletion_button.setEnabled(true);
             }
@@ -994,9 +1589,9 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             size_check_checkbox.setEnabled(true);
             state_check_checkbox.setEnabled(true);
             registry_check_checkbox.setEnabled(true);
-            delete_all_users_checkbox.setEnabled(true);
-            write_log_button.setEnabled(true);
-            results_table.setEnabled(true);
+            delete_all_users_checkbox.setEnabled(true);*/
+            write_log_button.setEnabled(true);/*
+            results_table.setEnabled(true);*/
         }
     }
 
@@ -1007,19 +1602,21 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
 
         @Override
         protected Object doInBackground() throws Exception {
+            running_deletion = true;
+            number_of_users_selected_for_deletion = 0;
+            for (UserData user : profile_deleter.getUserList()) {
+                if (user.getDelete()) {
+                    number_of_users_selected_for_deletion++;
+                }
+            }
             List<String> deleted_users = profile_deleter.processDeletion();
             deleted_users.add(0, "Deletion report:");
             if (deleted_users.size() > 2) {
                 for (String deleted_user : deleted_users) {
                     system_console_text_area.append('\n' + deleted_user);
                 }
-                if (profile_deleter.getSizeCheckComplete()) {
-                    double total_size = 0.0;
-                    for (UserData user : profile_deleter.getUserList()) {
-                        total_size += Double.parseDouble(user.getSize());
-                    }
-                    setTitle("Profile Deleter - " + profile_deleter.getRemoteComputer() + " - Total Users Size: " + doubleToFormattedString(total_size / (1024.0 * 1024.0)) + " MB");
-                }
+                displayDeletionReport(deleted_users);
+                setFormattedTitle();
             } else {
                 profile_deleter.logMessage("Nothing was flagged for deletion", ProfileDeleter.LOG_TYPE.WARNING, true);
             }
@@ -1041,6 +1638,7 @@ public class ProfileDeleterGUI extends JFrame implements TableModelListener, Act
             delete_all_users_checkbox.setEnabled(true);
             write_log_button.setEnabled(true);
             results_table.setEnabled(true);
+            running_deletion = false;
         }
     }
 }
